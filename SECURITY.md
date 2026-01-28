@@ -1,10 +1,13 @@
-# Security Review - SpectreVault.sol
+# Security Review - Spectre Finance Contracts
 
-This document outlines the security analysis of the SpectreVault smart contract.
+This document outlines the security analysis of the Spectre Finance smart contracts.
 
-## Contract Address
+## Contract Addresses
 
-**Deployed (Sepolia):** `0x9480557892B7e67347b105459C4b8F6B1F791A65`
+| Contract | Address (Sepolia) | Version |
+|----------|-------------------|---------|
+| **SpectreToken (FHERC20)** | `0x9480557892B7e67347b105459C4b8F6B1F791A65` | V5 (Current) |
+| **SpectreVault** | `0x7e3188bdB5DcE28735274389013d3b0194BDfA84` | V3 (Legacy) |
 
 ---
 

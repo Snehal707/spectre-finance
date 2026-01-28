@@ -191,7 +191,8 @@ npm run dev
 ```
 spectre-finance/
 ├── contracts/
-│   └── SpectreVault.sol        # FHE vault contract
+│   ├── SpectreToken.sol        # FHERC20 token (deployed V5)
+│   └── SpectreVault.sol        # FHE vault (legacy V3)
 ├── scripts/
 │   └── deploy.js               # Deployment script
 ├── test/
@@ -217,9 +218,31 @@ spectre-finance/
 
 ---
 
-## 📜 Smart Contract
+## 📜 Smart Contracts
 
-**File:** `contracts/SpectreVault.sol`
+### SpectreToken.sol (FHERC20) - **Deployed V5**
+
+**Address:** `0x9480557892B7e67347b105459C4b8F6B1F791A65`
+
+A true **FHERC20** token with full ERC20 compatibility and encrypted balances.
+
+| FHERC20 Feature | Function |
+|-----------------|----------|
+| **Token Metadata** | `name()`, `symbol()`, `decimals()` |
+| **Encrypted Balance** | `balanceOf(address)` → `euint128` |
+| **Private Transfer** | `transfer(to, InEuint128)` |
+| **Plain Transfer** | `transferPlain(to, amount)` |
+| **Approve/Allowance** | `approve()`, `allowance()`, `transferFrom()` |
+| **Mint (ETH→seETH)** | `mint()` payable |
+| **Burn (seETH→ETH)** | `requestBurnAll()`, `requestBurnPlain()` |
+| **Claim ETH** | `claimETH()` after CoFHE decryption |
+| **View Balance** | `requestBalanceDecryption()`, `getDecryptedBalance()` |
+
+### SpectreVault.sol (Legacy V3)
+
+**Address:** `0x7e3188bdB5DcE28735274389013d3b0194BDfA84`
+
+Original vault-style contract (kept for backwards compatibility).
 
 ### Key FHE Patterns
 
@@ -231,24 +254,15 @@ spectre-finance/
 | `FHE.allowThis/Sender()` | Proper access control |
 | Async Decryption | Two-step withdrawal (request → claim) |
 
-### Functions
-
-| Function | Description |
-|----------|-------------|
-| `deposit()` | Convert ETH to encrypted eETH |
-| `transfer(to, amount)` | Private transfer (no-branching) |
-| `requestWithdraw(amount)` | Start async decryption |
-| `requestWithdrawAll()` | Withdraw full balance |
-| `claimWithdraw()` | Claim after decryption completes |
-| `isWithdrawalReady()` | Check if decryption is done |
-
 ### Events
 
 ```solidity
-event Deposited(address indexed user, uint256 amount);
-event TransferInitiated(address indexed from, address indexed to);
+event Transfer(address indexed from, address indexed to);
+event Approval(address indexed owner, address indexed spender);
+event Mint(address indexed to);
+event Burn(address indexed from);
 event WithdrawalRequested(address indexed user);
-event WithdrawalClaimed(address indexed user, uint256 amount);
+event WithdrawalClaimed(address indexed user);
 ```
 
 ---
