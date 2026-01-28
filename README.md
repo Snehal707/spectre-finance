@@ -38,7 +38,7 @@ Unlike traditional mixers, Spectre uses **Fully Homomorphic Encryption (FHE)** v
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                       FRONTEND (Vite + React)                           │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌───────────────┐  │
-│  │ Deposit UI  │  │ Transfer UI │  │ Withdraw UI │  │ Privacy Guard │  │
+│  │   Mint UI   │  │ Transfer UI │  │   Burn UI   │  │ Privacy Guard │  │
 │  └─────────────┘  └─────────────┘  └─────────────┘  └───────────────┘  │
 │                              │                                          │
 │                      cofhejs SDK                                        │
@@ -46,13 +46,13 @@ Unlike traditional mixers, Spectre uses **Fully Homomorphic Encryption (FHE)** v
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                    SPECTREVAULT CONTRACT (Sepolia)                      │
+│                 SPECTRETOKEN (FHERC20) CONTRACT (Sepolia)               │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌───────────────┐  │
-│  │  deposit()  │  │ transfer()  │  │ requestWith │  │ claimWithdraw │  │
-│  │             │  │             │  │   draw()    │  │     ()        │  │
+│  │   mint()    │  │ transfer()  │  │ requestBurn │  │  claimETH()   │  │
+│  │             │  │             │  │    All()    │  │               │  │
 │  └─────────────┘  └─────────────┘  └──────┬──────┘  └───────┬───────┘  │
 │                                           │                  │          │
-│              mapping(address => euint128) balances           │          │
+│              mapping(address => euint128) _balances          │          │
 └───────────────────────────────────────────┼──────────────────┼──────────┘
                                             │                  │
                                             ▼                  │
@@ -66,12 +66,12 @@ Unlike traditional mixers, Spectre uses **Fully Homomorphic Encryption (FHE)** v
 
 ### Flow Summary
 
-1. **Deposit:** User sends ETH → Contract encrypts as `euint128` → Stored in balances mapping
-2. **Transfer:** Encrypted amount moved between users (no one sees the amount)
-3. **Withdraw:** 
-   - Step 1: `requestWithdraw()` triggers `FHE.decrypt()` → sent to CoFHE coprocessor
+1. **Mint:** User sends ETH via `mint()` → Contract encrypts as `euint128` → Stored in `_balances` mapping → User receives seETH
+2. **Transfer:** Encrypted amount moved between users via `transfer()` (no one sees the amount)
+3. **Burn (Withdraw):** 
+   - Step 1: `requestBurnAll()` or `requestBurnPlain()` triggers `FHE.decrypt()` → sent to CoFHE coprocessor
    - Step 2: Wait ~30 seconds for threshold decryption
-   - Step 3: `claimWithdraw()` retrieves result via `getDecryptResultSafe()` → ETH sent to user
+   - Step 3: `claimETH()` retrieves result via `getDecryptResultSafe()` → ETH sent to user
 
 ---
 
@@ -85,7 +85,7 @@ Unlike traditional mixers, Spectre uses **Fully Homomorphic Encryption (FHE)** v
 
 1. Go to https://spectre-finance.vercel.app
 2. Connect MetaMask (switch to Sepolia network)
-3. Enter an amount and click **ENCRYPT ASSETS**
+3. Enter an amount and click **MINT seETH**
 4. Confirm the transaction in MetaMask
 5. Your ETH is now encrypted as seETH! ✨
 
@@ -130,7 +130,7 @@ Unlike traditional mixers, Spectre uses **Fully Homomorphic Encryption (FHE)** v
 
 1. **Async Decryption Delay:** ~30 seconds wait for CoFHE to process
 2. **No Withdrawal Timeout:** If decryption fails, funds may be locked (emergency recovery planned)
-3. **Testnet Only:** `forceClaimWithdraw()` exists for testing but bypasses FHE checks
+3. **Deposit Amount Visible:** The ETH amount you mint is public; only seETH transfers are private
 4. **Round Number Leakage:** Depositing exactly 1.0 ETH leaks information (use Privacy Guard)
 
 ---
@@ -154,7 +154,7 @@ cd frontend && npm install
 
 ```bash
 # Copy example env file
-cp .env.example .env
+cp env.example .env
 
 # Edit .env with your values:
 # PRIVATE_KEY=your_wallet_private_key
@@ -212,7 +212,7 @@ spectre-finance/
 │   └── workflows/
 │       └── ci.yml              # Lint, typecheck, test on push
 ├── hardhat.config.js
-├── .env.example
+├── env.example
 └── package.json
 ```
 
