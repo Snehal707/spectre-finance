@@ -18,7 +18,7 @@
 ## Overview
 
 Spectre Finance allows users to:
-- **Deposit ETH** → Receive encrypted eETH balance
+- **Deposit ETH** → Receive encrypted seETH balance
 - **Transfer privately** → Move encrypted balances without revealing amounts
 - **Withdraw securely** → Async decryption via CoFHE coprocessor
 
@@ -87,11 +87,11 @@ Unlike traditional mixers, Spectre uses **Fully Homomorphic Encryption (FHE)** v
 2. Connect MetaMask (switch to Sepolia network)
 3. Enter an amount and click **ENCRYPT ASSETS**
 4. Confirm the transaction in MetaMask
-5. Your ETH is now encrypted as eETH! ✨
+5. Your ETH is now encrypted as seETH! ✨
 
 ### What You Should See
 
-- **Before:** ETH balance decreases, eETH balance increases
+- **Before:** ETH balance decreases, seETH balance increases
 - **Encrypt:** Transaction confirmed, balance shows encrypted amount
 - **Decrypt:** Request → Wait 30s → Claim button enables → ETH returned
 
