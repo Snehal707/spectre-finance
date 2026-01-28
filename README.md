@@ -1,0 +1,310 @@
+# Spectre Finance 👻
+
+**Privacy-preserving DeFi protocol using CoFHE (Confidential FHE) on Sepolia**
+
+![Fhenix](https://img.shields.io/badge/CoFHE-Fhenix-00D4FF)
+![Sepolia](https://img.shields.io/badge/Network-Sepolia-blue)
+![Solidity](https://img.shields.io/badge/Solidity-0.8.25-blue)
+![React](https://img.shields.io/badge/React-18-61DAFB)
+![License](https://img.shields.io/badge/License-MIT-green)
+
+## 🚀 Live Demo
+
+- **Website:** https://spectre-finance.vercel.app
+- **Contract (Sepolia):** [`0x9480557892B7e67347b105459C4b8F6B1F791A65`](https://sepolia.etherscan.io/address/0x9480557892B7e67347b105459C4b8F6B1F791A65)
+
+---
+
+## Overview
+
+Spectre Finance allows users to:
+- **Deposit ETH** → Receive encrypted eETH balance
+- **Transfer privately** → Move encrypted balances without revealing amounts
+- **Withdraw securely** → Async decryption via CoFHE coprocessor
+
+Unlike traditional mixers, Spectre uses **Fully Homomorphic Encryption (FHE)** via Fhenix CoFHE to allow smart contracts to compute on encrypted data without ever decrypting it.
+
+---
+
+## 🏗️ Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                              USER                                        │
+│                         (MetaMask Wallet)                               │
+└─────────────────────────────┬───────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                       FRONTEND (Vite + React)                           │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌───────────────┐  │
+│  │ Deposit UI  │  │ Transfer UI │  │ Withdraw UI │  │ Privacy Guard │  │
+│  └─────────────┘  └─────────────┘  └─────────────┘  └───────────────┘  │
+│                              │                                          │
+│                      cofhejs SDK                                        │
+└─────────────────────────────┬───────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    SPECTREVAULT CONTRACT (Sepolia)                      │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌───────────────┐  │
+│  │  deposit()  │  │ transfer()  │  │ requestWith │  │ claimWithdraw │  │
+│  │             │  │             │  │   draw()    │  │     ()        │  │
+│  └─────────────┘  └─────────────┘  └──────┬──────┘  └───────┬───────┘  │
+│                                           │                  │          │
+│              mapping(address => euint128) balances           │          │
+└───────────────────────────────────────────┼──────────────────┼──────────┘
+                                            │                  │
+                                            ▼                  │
+┌─────────────────────────────────────────────────────────────────────────┐
+│                      CoFHE COPROCESSOR (Off-chain)                      │
+│                                                                         │
+│    FHE.decrypt() ──────► Threshold Decryption ──────► getDecryptResult │
+│                              (~30 seconds)                              │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Flow Summary
+
+1. **Deposit:** User sends ETH → Contract encrypts as `euint128` → Stored in balances mapping
+2. **Transfer:** Encrypted amount moved between users (no one sees the amount)
+3. **Withdraw:** 
+   - Step 1: `requestWithdraw()` triggers `FHE.decrypt()` → sent to CoFHE coprocessor
+   - Step 2: Wait ~30 seconds for threshold decryption
+   - Step 3: `claimWithdraw()` retrieves result via `getDecryptResultSafe()` → ETH sent to user
+
+---
+
+## ⚡ Quick Start (1 Minute)
+
+### Prerequisites
+- MetaMask wallet with Sepolia ETH ([Get from faucet](https://sepoliafaucet.com))
+- Node.js 18+
+
+### Try the Live App
+
+1. Go to https://spectre-finance.vercel.app
+2. Connect MetaMask (switch to Sepolia network)
+3. Enter an amount and click **ENCRYPT ASSETS**
+4. Confirm the transaction in MetaMask
+5. Your ETH is now encrypted as eETH! ✨
+
+### What You Should See
+
+- **Before:** ETH balance decreases, eETH balance increases
+- **Encrypt:** Transaction confirmed, balance shows encrypted amount
+- **Decrypt:** Request → Wait 30s → Claim button enables → ETH returned
+
+---
+
+## 🔐 Security & Privacy
+
+### What IS Private
+
+| Data | Privacy Level | Details |
+|------|---------------|---------|
+| **Individual Balances** | 🔒 Fully Encrypted | Stored as `euint128`, only owner can decrypt |
+| **Transfer Amounts** | 🔒 Hidden | No one can see how much was transferred |
+| **Failed Transfers** | 🔒 Indistinguishable | Failed transfers look identical to successful ones |
+
+### What is NOT Private (Metadata Leakage)
+
+| Data | Visibility | Mitigation |
+|------|------------|------------|
+| **Deposit Amount** | 🔓 Public on-chain | Use randomized amounts (Privacy Guard helps) |
+| **Withdrawal Amount** | 🔓 Revealed at claim | Inherent to async decryption |
+| **Transaction Timing** | 🔓 Public | Space out transactions |
+| **Sender/Receiver** | 🔓 Public addresses | Use fresh wallets |
+| **TVL (Total Value)** | 🔓 Public | By design for transparency |
+
+### Trust Assumptions
+
+| Component | Trust Level | Notes |
+|-----------|-------------|-------|
+| **CoFHE Coprocessor** | Trusted | Threshold decryption requires honest majority |
+| **Fhenix Network** | Trusted | Provides FHE infrastructure |
+| **Smart Contract** | Auditable | Code is verified on Etherscan |
+| **Frontend** | Trustless | Open source, can self-host |
+
+### Known Limitations
+
+1. **Async Decryption Delay:** ~30 seconds wait for CoFHE to process
+2. **No Withdrawal Timeout:** If decryption fails, funds may be locked (emergency recovery planned)
+3. **Testnet Only:** `forceClaimWithdraw()` exists for testing but bypasses FHE checks
+4. **Round Number Leakage:** Depositing exactly 1.0 ETH leaks information (use Privacy Guard)
+
+---
+
+## 🛠️ Development Setup
+
+### 1. Clone & Install
+
+```bash
+git clone https://github.com/Snehal707/spectre-finance.git
+cd spectre-finance
+
+# Install contract dependencies
+npm install
+
+# Install frontend dependencies
+cd frontend && npm install
+```
+
+### 2. Configure Environment
+
+```bash
+# Copy example env file
+cp .env.example .env
+
+# Edit .env with your values:
+# PRIVATE_KEY=your_wallet_private_key
+# SEPOLIA_RPC_URL=https://rpc.sepolia.org
+```
+
+### 3. Run Tests
+
+```bash
+npm test
+```
+
+### 4. Deploy Contract
+
+```bash
+# Deploy to Sepolia
+npm run deploy:sepolia
+
+# Or Arbitrum Sepolia (lower gas)
+npm run deploy:arb-sepolia
+```
+
+### 5. Run Frontend
+
+```bash
+cd frontend
+npm run dev
+```
+
+---
+
+## 📁 Project Structure
+
+```
+spectre-finance/
+├── contracts/
+│   └── SpectreVault.sol        # FHE vault contract
+├── scripts/
+│   └── deploy.js               # Deployment script
+├── test/
+│   └── SpectreVault.test.js    # Contract tests
+├── frontend/
+│   ├── src/
+│   │   ├── components/         # React components
+│   │   │   ├── SpectreInterface.tsx
+│   │   │   ├── PrivacyGuard.tsx   # AI warning for round numbers
+│   │   │   └── ...
+│   │   ├── hooks/
+│   │   │   ├── useCofhe.ts        # FHE SDK integration
+│   │   │   └── useWallet.ts
+│   │   └── utils/
+│   └── package.json
+├── .github/
+│   └── workflows/
+│       └── ci.yml              # Lint, typecheck, test on push
+├── hardhat.config.js
+├── .env.example
+└── package.json
+```
+
+---
+
+## 📜 Smart Contract
+
+**File:** `contracts/SpectreVault.sol`
+
+### Key FHE Patterns
+
+| Pattern | Description |
+|---------|-------------|
+| `euint128` | Encrypted 128-bit integers for balances |
+| `ENCRYPTED_ZERO` | Gas-optimized constant |
+| `FHE.select()` | No-branching conditional logic |
+| `FHE.allowThis/Sender()` | Proper access control |
+| Async Decryption | Two-step withdrawal (request → claim) |
+
+### Functions
+
+| Function | Description |
+|----------|-------------|
+| `deposit()` | Convert ETH to encrypted eETH |
+| `transfer(to, amount)` | Private transfer (no-branching) |
+| `requestWithdraw(amount)` | Start async decryption |
+| `requestWithdrawAll()` | Withdraw full balance |
+| `claimWithdraw()` | Claim after decryption completes |
+| `isWithdrawalReady()` | Check if decryption is done |
+
+### Events
+
+```solidity
+event Deposited(address indexed user, uint256 amount);
+event TransferInitiated(address indexed from, address indexed to);
+event WithdrawalRequested(address indexed user);
+event WithdrawalClaimed(address indexed user, uint256 amount);
+```
+
+---
+
+## 🎨 Frontend Features
+
+- 🌓 **Dark/Light Theme** - Matrix/Cyberpunk aesthetic
+- 🔒 **Privacy Mode** - Encrypted balance display
+- 🤖 **Privacy Guard** - AI warns about round number deposits
+- 📱 **Responsive** - Works on desktop and mobile
+- ⏳ **Pending State UX** - Visual progress for 30s decrypt wait
+
+---
+
+## 🌐 Supported Networks
+
+| Network | Chain ID | Status |
+|---------|----------|--------|
+| **Ethereum Sepolia** | 11155111 | ✅ Full support |
+| **Arbitrum Sepolia** | 421614 | ✅ Full support |
+| **Base Sepolia** | 84532 | ✅ Full support |
+
+---
+
+## 📚 Resources
+
+- [Fhenix CoFHE Documentation](https://cofhe-docs.fhenix.zone)
+- [cofhe-hardhat-starter](https://github.com/fhenixprotocol/cofhe-hardhat-starter)
+- [cofhejs GitHub](https://github.com/FhenixProtocol/cofhejs)
+- [CoFHE Contracts GitHub](https://github.com/FhenixProtocol/cofhe-contracts)
+
+---
+
+## ⚠️ Disclaimer
+
+**THIS SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND.**
+
+- This is experimental software using cutting-edge cryptography (FHE)
+- Smart contracts have NOT been audited by a third party
+- Use only on testnets or with amounts you can afford to lose
+- The CoFHE coprocessor is a trusted component in the security model
+- Async decryption failures may result in locked funds
+
+**Do not use in production without proper security audits.**
+
+---
+
+## 📄 License
+
+MIT License - see [LICENSE](LICENSE) file.
+
+---
+
+## 🙏 Credits
+
+Built with:
+- **Fhenix Protocol** - CoFHE infrastructure
+- **Official Fhenix Tools** - cofhe-hardhat-plugin, cofhe-contracts
+- **Redact Money** - UI inspiration

@@ -1,0 +1,16 @@
+{
+  "name": "spectre-finance",
+  "version": "1.0.0",
+  "description": "Privacy-preserving DeFi protocol using CoFHE on Fhenix (Sepolia)",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "deploy:sepolia": "hardhat run scripts/deploy.js --network sepolia",
+    "deploy:arb-sepolia": "hardhat run scripts/deploy.js --network arbSepolia",
+    "deploy:base-sepolia": "hardhat run scripts/deploy.js --network baseSepolia",
+    "deploy:local": "hardhat run scripts/deploy.js --network localhost"
+  },
+  "keywords": ["fhenix", "cofhe", "fhe", "privacy", "defi", "sepolia"],
+  "author": "",
+  "license": "MIT"
+}

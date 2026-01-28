@@ -1,0 +1,50 @@
+MIT License
+
+Copyright (c) 2026 Spectre Finance
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+ADDITIONAL DISCLAIMER FOR DEFI AND EXPERIMENTAL CRYPTOGRAPHY:
+
+This software implements Fully Homomorphic Encryption (FHE) through the Fhenix
+CoFHE coprocessor. Users acknowledge and accept the following:
+
+1. EXPERIMENTAL TECHNOLOGY: FHE is cutting-edge cryptography that may contain
+   undiscovered vulnerabilities.
+
+2. NO AUDIT: The smart contracts in this repository have NOT been audited by
+   any third-party security firm.
+
+3. TRUSTED COMPONENTS: The CoFHE coprocessor requires trust in threshold
+   decryption operators. A compromised majority could decrypt user balances.
+
+4. FUND RISK: Bugs in async decryption, contract logic, or the CoFHE
+   infrastructure could result in permanent loss of funds.
+
+5. TESTNET ONLY: This software is intended for testnet use. Using it with
+   real assets on mainnet is at your own risk.
+
+6. METADATA LEAKAGE: While balances and transfer amounts are encrypted,
+   transaction timing, addresses, and deposit/withdrawal amounts remain
+   visible on-chain.
+
+BY USING THIS SOFTWARE, YOU ACKNOWLEDGE THAT YOU HAVE READ AND UNDERSTOOD
+THESE RISKS AND AGREE TO ACCEPT FULL RESPONSIBILITY FOR ANY LOSSES.

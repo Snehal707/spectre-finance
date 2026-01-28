@@ -1,0 +1,48 @@
+# Dependencies
+node_modules/
+
+# Build artifacts
+artifacts/
+cache/
+typechain-types/
+
+# Environment - NEVER commit real .env files!
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+
+# BUT allow the example file
+!.env.example
+!env.example
+
+# Coverage
+coverage/
+coverage.json
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Frontend build
+frontend/dist/
+frontend/node_modules/
+
+# Security - never commit these
+*.pem
+*.key
+wallet.json
+keystore.json
+mnemonic.txt
+secrets.json
