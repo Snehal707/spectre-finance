@@ -12,5 +12,12 @@
   },
   "keywords": ["fhenix", "cofhe", "fhe", "privacy", "defi", "sepolia"],
   "author": "",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "@fhenixprotocol/cofhe-contracts": "^0.2.0",
+    "cofhe-hardhat-plugin": "^0.2.0",
+    "hardhat": "^2.19.0",
+    "dotenv": "^16.3.1"
+  }
 }
