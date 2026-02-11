@@ -10,8 +10,8 @@
 
 ## 🚀 Live Demo
 
-- **Website:** https://spectre-finance.vercel.app
-- **Contract (Sepolia):** [`0x9480557892B7e67347b105459C4b8F6B1F791A65`](https://sepolia.etherscan.io/address/0x9480557892B7e67347b105459C4b8F6B1F791A65)
+- **Website:** https://spectre-finance-ukzc.vercel.app
+- **Contract (Sepolia):** [`0x751111805C4c8a014da9f040199d040788d61347`](https://sepolia.etherscan.io/address/0x751111805C4c8a014da9f040199d040788d61347) (SpectreToken V7)
 
 ---
 
@@ -83,7 +83,7 @@ Unlike traditional mixers, Spectre uses **Fully Homomorphic Encryption (FHE)** v
 
 ### Try the Live App
 
-1. Go to https://spectre-finance.vercel.app
+1. Go to https://spectre-finance-ukzc.vercel.app
 2. Connect MetaMask (switch to Sepolia network)
 3. Enter an amount and click **MINT seETH**
 4. Confirm the transaction in MetaMask
@@ -191,7 +191,7 @@ npm run dev
 ```
 spectre-finance/
 ├── contracts/
-│   ├── SpectreToken.sol        # FHERC20 token (deployed V5)
+│   ├── SpectreToken.sol        # FHERC20 token (V7 - Redact-style balanceOf)
 │   └── SpectreVault.sol        # FHE vault (legacy V3)
 ├── scripts/
 │   └── deploy.js               # Deployment script
@@ -220,16 +220,18 @@ spectre-finance/
 
 ## 📜 Smart Contracts
 
-### SpectreToken.sol (FHERC20) - **Deployed V5**
+### SpectreToken.sol (FHERC20) - **Deployed V7**
 
-**Address:** `0x9480557892B7e67347b105459C4b8F6B1F791A65`
+**Address:** `0x751111805C4c8a014da9f040199d040788d61347`
 
-A true **FHERC20** token with full ERC20 compatibility and encrypted balances.
+A true **FHERC20** token with full ERC20 compatibility and encrypted balances. Uses a **Redact-style** pattern: `balanceOf()` returns an indicated balance (0.0001–0.9999) so MetaMask and wallets display sane numbers, while real amounts stay encrypted.
 
 | FHERC20 Feature | Function |
 |-----------------|----------|
 | **Token Metadata** | `name()`, `symbol()`, `decimals()` |
-| **Encrypted Balance** | `balanceOf(address)` → `euint128` |
+| **Wallet Balance** | `balanceOf(address)` → `uint256` (indicated, wallet-friendly) |
+| **Encrypted Balance** | `encryptedBalanceOf(address)` → `euint128` (app-only) |
+| **Indicated Balance** | `indicatedBalanceOf(address)` → `uint256` |
 | **Private Transfer** | `transfer(to, InEuint128)` |
 | **Plain Transfer** | `transferPlain(to, amount)` |
 | **Approve/Allowance** | `approve()`, `allowance()`, `transferFrom()` |
@@ -257,7 +259,7 @@ Original vault-style contract (kept for backwards compatibility).
 ### Events
 
 ```solidity
-event Transfer(address indexed from, address indexed to);
+event Transfer(address indexed from, address indexed to, uint256 value);  // value = 0.0001 for MetaMask
 event Approval(address indexed owner, address indexed spender);
 event Mint(address indexed to);
 event Burn(address indexed from);
@@ -274,6 +276,7 @@ event WithdrawalClaimed(address indexed user);
 - 🤖 **Privacy Guard** - AI warns about round number deposits
 - 📱 **Responsive** - Works on desktop and mobile
 - ⏳ **Pending State UX** - Visual progress for 30s decrypt wait
+- 🦊 **MetaMask Compatible** - Indicated balance + Transfer events for wallet display
 
 ---
 
