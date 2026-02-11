@@ -26,6 +26,15 @@ contract SpectreToken {
     mapping(address => euint128) private _balances;
     mapping(address => bool) private _hasBalance;
     
+    // FHERC20 indicated balance for wallet/explorer compatibility (0.0001-0.9999)
+    uint256 private constant SIGNAL_AMOUNT = 0.0001 ether;   // 1e14
+    uint256 private constant INITIAL_INDICATED = 0.5001 ether;
+    uint256 private constant MIN_INDICATED = 0.0001 ether;
+    uint256 private constant MAX_INDICATED = 0.9999 ether;
+    
+    mapping(address => uint256) private _indicatedBalance;
+    mapping(address => bool) private _hasInteracted;
+    
     // Encrypted allowances for DEX/transfers
     mapping(address => mapping(address => euint128)) private _allowances;
     
@@ -47,7 +56,7 @@ contract SpectreToken {
     
     // ============ Events ============
     // Note: Events don't reveal amounts - only that actions occurred
-    event Transfer(address indexed from, address indexed to);
+    event Transfer(address indexed from, address indexed to, uint256 value);
     event Approval(address indexed owner, address indexed spender);
     event Mint(address indexed to);
     event Burn(address indexed from);
@@ -79,6 +88,15 @@ contract SpectreToken {
      */
     function totalSupply() external view returns (euint128) {
         return _totalSupply;
+    }
+    
+    /**
+     * @notice Get indicated balance for wallet/explorer compatibility (FHERC20)
+     * @param account The address to query
+     * @return Indicated balance (0 or 0.0001-0.9999 range)
+     */
+    function indicatedBalanceOf(address account) external view returns (uint256) {
+        return _indicatedBalance[account];
     }
     
     /**
@@ -115,7 +133,20 @@ contract SpectreToken {
         FHE.allowThis(_balances[to]);
         FHE.allow(_balances[to], to);
         
-        emit Transfer(msg.sender, to);
+        // FHERC20 indicated balance: sender decreases, receiver increases
+        _indicatedBalance[msg.sender] = _indicatedBalance[msg.sender] >= SIGNAL_AMOUNT + MIN_INDICATED
+            ? _indicatedBalance[msg.sender] - SIGNAL_AMOUNT
+            : MIN_INDICATED;
+        if (!_hasInteracted[to]) {
+            _indicatedBalance[to] = INITIAL_INDICATED;
+            _hasInteracted[to] = true;
+        } else {
+            _indicatedBalance[to] = _indicatedBalance[to] + SIGNAL_AMOUNT <= MAX_INDICATED
+                ? _indicatedBalance[to] + SIGNAL_AMOUNT
+                : MAX_INDICATED;
+        }
+        
+        emit Transfer(msg.sender, to, SIGNAL_AMOUNT);
         return true;
     }
     
@@ -152,7 +183,20 @@ contract SpectreToken {
         FHE.allowThis(_balances[to]);
         FHE.allow(_balances[to], to);
         
-        emit Transfer(msg.sender, to);
+        // FHERC20 indicated balance: sender decreases, receiver increases
+        _indicatedBalance[msg.sender] = _indicatedBalance[msg.sender] >= SIGNAL_AMOUNT + MIN_INDICATED
+            ? _indicatedBalance[msg.sender] - SIGNAL_AMOUNT
+            : MIN_INDICATED;
+        if (!_hasInteracted[to]) {
+            _indicatedBalance[to] = INITIAL_INDICATED;
+            _hasInteracted[to] = true;
+        } else {
+            _indicatedBalance[to] = _indicatedBalance[to] + SIGNAL_AMOUNT <= MAX_INDICATED
+                ? _indicatedBalance[to] + SIGNAL_AMOUNT
+                : MAX_INDICATED;
+        }
+        
+        emit Transfer(msg.sender, to, SIGNAL_AMOUNT);
         return true;
     }
     
@@ -205,7 +249,20 @@ contract SpectreToken {
         FHE.allow(_allowances[from][msg.sender], from);
         FHE.allowSender(_allowances[from][msg.sender]);
         
-        emit Transfer(from, to);
+        // FHERC20 indicated balance: from decreases, to increases
+        _indicatedBalance[from] = _indicatedBalance[from] >= SIGNAL_AMOUNT + MIN_INDICATED
+            ? _indicatedBalance[from] - SIGNAL_AMOUNT
+            : MIN_INDICATED;
+        if (!_hasInteracted[to]) {
+            _indicatedBalance[to] = INITIAL_INDICATED;
+            _hasInteracted[to] = true;
+        } else {
+            _indicatedBalance[to] = _indicatedBalance[to] + SIGNAL_AMOUNT <= MAX_INDICATED
+                ? _indicatedBalance[to] + SIGNAL_AMOUNT
+                : MAX_INDICATED;
+        }
+        
+        emit Transfer(from, to, SIGNAL_AMOUNT);
         return true;
     }
     
@@ -278,6 +335,16 @@ contract SpectreToken {
         FHE.allowSender(_balances[msg.sender]);
         FHE.allowThis(_totalSupply);
         
+        // FHERC20 indicated balance: first interaction = 0.5001, else +0.0001
+        if (!_hasInteracted[msg.sender]) {
+            _indicatedBalance[msg.sender] = INITIAL_INDICATED;
+            _hasInteracted[msg.sender] = true;
+        } else {
+            _indicatedBalance[msg.sender] = _indicatedBalance[msg.sender] + SIGNAL_AMOUNT <= MAX_INDICATED
+                ? _indicatedBalance[msg.sender] + SIGNAL_AMOUNT
+                : MAX_INDICATED;
+        }
+        emit Transfer(address(0), msg.sender, SIGNAL_AMOUNT);
         emit Mint(msg.sender);
     }
     
@@ -316,6 +383,11 @@ contract SpectreToken {
         // Trigger CoFHE decryption
         FHE.decrypt(actualAmount);
         
+        // FHERC20 indicated balance: sender decreases
+        _indicatedBalance[msg.sender] = _indicatedBalance[msg.sender] >= SIGNAL_AMOUNT + MIN_INDICATED
+            ? _indicatedBalance[msg.sender] - SIGNAL_AMOUNT
+            : MIN_INDICATED;
+        emit Transfer(msg.sender, address(0), SIGNAL_AMOUNT);
         emit WithdrawalRequested(msg.sender);
         emit Burn(msg.sender);
     }
@@ -355,6 +427,11 @@ contract SpectreToken {
         // Trigger CoFHE decryption
         FHE.decrypt(actualAmount);
         
+        // FHERC20 indicated balance: sender decreases
+        _indicatedBalance[msg.sender] = _indicatedBalance[msg.sender] >= SIGNAL_AMOUNT + MIN_INDICATED
+            ? _indicatedBalance[msg.sender] - SIGNAL_AMOUNT
+            : MIN_INDICATED;
+        emit Transfer(msg.sender, address(0), SIGNAL_AMOUNT);
         emit WithdrawalRequested(msg.sender);
         emit Burn(msg.sender);
     }
@@ -384,6 +461,9 @@ contract SpectreToken {
         
         FHE.decrypt(amount);
         
+        // FHERC20 indicated balance: burn all -> 0
+        _indicatedBalance[msg.sender] = 0;
+        emit Transfer(msg.sender, address(0), SIGNAL_AMOUNT);
         emit WithdrawalRequested(msg.sender);
         emit Burn(msg.sender);
     }

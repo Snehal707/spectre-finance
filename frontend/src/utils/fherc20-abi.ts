@@ -60,6 +60,13 @@ export const SPECTRE_TOKEN_ABI = [
     type: "function",
   },
   {
+    inputs: [{ internalType: "address", name: "account", type: "address" }],
+    name: "indicatedBalanceOf",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
     inputs: [],
     name: "hasPendingWithdrawal",
     outputs: [{ internalType: "bool", name: "", type: "bool" }],
@@ -190,6 +197,7 @@ export const SPECTRE_TOKEN_ABI = [
     inputs: [
       { indexed: true, internalType: "address", name: "from", type: "address" },
       { indexed: true, internalType: "address", name: "to", type: "address" },
+      { indexed: false, internalType: "uint256", name: "value", type: "uint256" },
     ],
     name: "Transfer",
     type: "event",

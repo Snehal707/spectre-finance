@@ -46,6 +46,9 @@ export function EncryptDecryptCard({
   const [isBalanceSyncing, setIsBalanceSyncing] = useState(false);
   const [balanceSyncStatus, setBalanceSyncStatus] = useState<string | null>(null);
 
+  // Mint confirmation modal
+  const [showMintConfirm, setShowMintConfirm] = useState(false);
+
   const isLight = theme === 'light';
   
   const currentBalance = mode === 'encrypt' ? parseFloat(ethBalance) : parseFloat(eEthBalance);
@@ -236,10 +239,11 @@ export function EncryptDecryptCard({
     }
   };
 
-  // ENCRYPT: Mint seETH (ETH -> seETH)
+  // ENCRYPT: Mint seETH (ETH -> seETH) - called after user confirms in modal
   const handleEncrypt = async () => {
     if (!isConnected || !window.ethereum || parseFloat(amount) <= 0) return;
 
+    setShowMintConfirm(false);
     setIsProcessing(true);
     setCurrentStep(1);
     setError(null);
@@ -439,7 +443,10 @@ export function EncryptDecryptCard({
 
   const handleAction = () => {
     if (mode === 'encrypt') {
-      handleEncrypt();
+      // Show confirmation modal before mint
+      if (parseFloat(amount) > 0) {
+        setShowMintConfirm(true);
+      }
     } else if (mode === 'transfer') {
       handleTransfer();
     } else {
@@ -737,6 +744,60 @@ export function EncryptDecryptCard({
           isLight ? 'bg-yellow-50 text-yellow-700' : 'bg-yellow-900/30 text-yellow-400'
         }`}>
           Connect your wallet to start
+        </div>
+      )}
+
+      {/* Mint confirmation modal */}
+      {showMintConfirm && mode === 'encrypt' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className={`w-full max-w-md rounded-2xl p-6 shadow-xl ${
+            isLight ? 'bg-white' : 'bg-slate-900 border border-slate-700'
+          }`}>
+            <h3 className={`text-lg font-bold mb-3 ${isLight ? 'text-slate-900' : 'text-white'}`}>
+              Confirm Mint
+            </h3>
+            <p className={`text-sm mb-4 ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
+              You are sending <strong>{amount} ETH</strong> to mint seETH.
+            </p>
+            <p className={`text-xs mb-4 ${isLight ? 'text-slate-500' : 'text-slate-500'}`}>
+              Contract:{' '}
+              <a
+                href={`${DEFAULT_NETWORK.blockExplorer}/address/${CONTRACT_ADDRESSES.spectreToken}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline"
+              >
+                {CONTRACT_ADDRESSES.spectreToken.slice(0, 10)}...{CONTRACT_ADDRESSES.spectreToken.slice(-8)}
+              </a>
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowMintConfirm(false)}
+                className={`flex-1 rounded-xl py-3 text-sm font-bold ${
+                  isLight ? 'bg-slate-200 text-slate-700 hover:bg-slate-300' : 'bg-slate-700 text-slate-200 hover:bg-slate-600'
+                }`}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => handleEncrypt()}
+                className="flex-1 rounded-xl py-3 text-sm font-bold bg-blue-600 text-white hover:bg-blue-700"
+              >
+                Confirm and Mint
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MetaMask warning banner - on mint tab */}
+      {mode === 'encrypt' && !showMintConfirm && !isProcessing && (
+        <div className={`mt-4 rounded-xl p-3 text-xs ${
+          isLight ? 'bg-amber-50 text-amber-800 border border-amber-200' : 'bg-amber-900/20 text-amber-300 border border-amber-800'
+        }`}>
+          If MetaMask warns, verify the contract address and tx hash on the block explorer before approving.
         </div>
       )}
     </div>
