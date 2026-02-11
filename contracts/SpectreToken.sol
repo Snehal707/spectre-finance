@@ -74,12 +74,32 @@ contract SpectreToken {
     // ============ FHERC20 Core Functions ============
     
     /**
-     * @notice Get encrypted balance (only owner can decrypt)
+     * @notice Get wallet-friendly balance for MetaMask/explorers (Redact-style)
+     * @dev Returns indicated balance (0 or 0.0001-0.9999) so wallets display sane numbers
+     * @param account The address to query
+     * @return Indicated balance (uint256, formatted with decimals)
+     */
+    function balanceOf(address account) external view returns (uint256) {
+        return _indicatedBalance[account];
+    }
+    
+    /**
+     * @notice Get encrypted balance (app-only, for decryption flows)
+     * @dev Only use this in your app for requestBalanceDecryption / getDecryptedBalance
      * @param account The address to query
      * @return Encrypted balance (euint128)
      */
-    function balanceOf(address account) external view returns (euint128) {
+    function encryptedBalanceOf(address account) external view returns (euint128) {
         return _balances[account];
+    }
+    
+    /**
+     * @notice Get indicated balance (alias for balanceOf, FHERC20 compatibility)
+     * @param account The address to query
+     * @return Indicated balance (0 or 0.0001-0.9999 range)
+     */
+    function indicatedBalanceOf(address account) external view returns (uint256) {
+        return _indicatedBalance[account];
     }
     
     /**
@@ -88,15 +108,6 @@ contract SpectreToken {
      */
     function totalSupply() external view returns (euint128) {
         return _totalSupply;
-    }
-    
-    /**
-     * @notice Get indicated balance for wallet/explorer compatibility (FHERC20)
-     * @param account The address to query
-     * @return Indicated balance (0 or 0.0001-0.9999 range)
-     */
-    function indicatedBalanceOf(address account) external view returns (uint256) {
-        return _indicatedBalance[account];
     }
     
     /**

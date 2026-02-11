@@ -45,8 +45,8 @@ export const DEFAULT_NETWORK = SEPOLIA;
 
 // Contract addresses - Deployed with official CoFHE hardhat plugin
 export const CONTRACT_ADDRESSES = {
-  // V6: FHERC20 SpectreToken with indicated balance & 0.0001 Transfer for MetaMask compatibility
-  spectreToken: import.meta.env.VITE_SPECTRE_TOKEN_ADDRESS || '0x82210e4C3E8aed68F56A2105145eE001249EdFF8',
+  // V7: balanceOf returns indicated balance (Redact-style) for sane MetaMask display
+  spectreToken: import.meta.env.VITE_SPECTRE_TOKEN_ADDRESS || '0x751111805C4c8a014da9f040199d040788d61347',
   // V3: Original vault (for backwards compatibility)
   spectreVault: import.meta.env.VITE_SPECTRE_VAULT_ADDRESS || '0x7e3188bdB5DcE28735274389013d3b0194BDfA84',
   // Legacy contracts (for claiming old pending withdrawals)

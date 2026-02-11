@@ -34,6 +34,13 @@ export const SPECTRE_TOKEN_ABI = [
   {
     inputs: [{ internalType: "address", name: "account", type: "address" }],
     name: "balanceOf",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "address", name: "account", type: "address" }],
+    name: "encryptedBalanceOf",
     outputs: [{ internalType: "euint128", name: "", type: "uint256" }],
     stateMutability: "view",
     type: "function",
