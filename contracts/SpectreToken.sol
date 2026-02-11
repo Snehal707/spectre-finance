@@ -370,9 +370,9 @@ contract SpectreToken {
         
         euint128 amount = FHE.asEuint128(encryptedAmount);
         
-        // Check sufficient balance
+        // Check sufficient balance; if insufficient, burn 0 (same as transfer)
         ebool sufficientBalance = FHE.gte(_balances[msg.sender], amount);
-        euint128 actualAmount = FHE.select(sufficientBalance, amount, _balances[msg.sender]);
+        euint128 actualAmount = FHE.select(sufficientBalance, amount, ENCRYPTED_ZERO);
         
         // Store withdrawal request
         _withdrawals[msg.sender] = WithdrawalRequest({
@@ -414,9 +414,9 @@ contract SpectreToken {
         
         euint128 encAmount = FHE.asEuint128(amount);
         
-        // Check sufficient balance
+        // Check sufficient balance; if insufficient, burn 0 (same as transfer)
         ebool sufficientBalance = FHE.gte(_balances[msg.sender], encAmount);
-        euint128 actualAmount = FHE.select(sufficientBalance, encAmount, _balances[msg.sender]);
+        euint128 actualAmount = FHE.select(sufficientBalance, encAmount, ENCRYPTED_ZERO);
         
         // Store withdrawal request
         _withdrawals[msg.sender] = WithdrawalRequest({
