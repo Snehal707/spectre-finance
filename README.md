@@ -73,6 +73,31 @@ Unlike traditional mixers, Spectre uses **Fully Homomorphic Encryption (FHE)** v
    - Step 2: Wait ~30 seconds for threshold decryption
    - Step 3: `claimETH()` retrieves result via `getDecryptResultSafe()` → ETH sent to user
 
+### DApp architecture
+
+**Stack:** User (MetaMask) → Frontend (Vite + React, Sepolia) → SpectreToken FHERC20 (Sepolia) → CoFHE coprocessor (off-chain decryption).
+
+**Frontend:**
+- **Page:** `SpectrePage` (main app).
+- **Components:** `HeaderBar` (logo, connect, theme), `HeroBlock` (tagline, badges), `EncryptDecryptCard` (Mint / Transfer / Burn tabs, amount inputs, steps, Sync balance, claim).
+- **Hooks:** `useWallet` (connect, chainId, switch network), `useTheme`, `useCofhe` (optional: encrypt/unseal for fully private transfer).
+- **Config:** `config.ts` (Sepolia, contract addresses), `fherc20-abi.ts` (SpectreToken ABI).
+
+**Data flows:**
+- **Mint:** ETH → `mint()` → contract stores encrypted in `_balances`, updates indicated balance → Transfer(0, user, 0.0001) for wallets.
+- **Transfer:** `transferPlain(to, amount)` (or encrypted `transfer(to, InEuint128)` with cofhejs) → encrypted and indicated balances updated.
+- **Sync balance:** `requestBalanceDecryption()` → CoFHE decrypts `_balances[user]` → frontend polls `getDecryptedBalance()` → result stored in localStorage and shown in UI.
+- **Burn:** `requestBurnPlain` / `requestBurnAll` → contract stores request and calls `FHE.decrypt()` → CoFHE decrypts off-chain → frontend polls `isWithdrawalReady()` → user calls `claimETH()` to receive ETH.
+
+```mermaid
+flowchart LR
+  User[MetaMask] --> Frontend[Vite React]
+  Frontend --> Contract[SpectreToken Sepolia]
+  Contract --> CoFHE[CoFHE Coprocessor]
+  CoFHE -.->|decrypt result| Contract
+  Contract -.->|readiness/balance| Frontend
+```
+
 ---
 
 ## ⚡ Quick Start (1 Minute)
