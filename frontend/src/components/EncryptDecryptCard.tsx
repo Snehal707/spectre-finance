@@ -211,11 +211,10 @@ export function EncryptDecryptCard({
       const tx = await contract.requestBalanceDecryption();
       await tx.wait();
 
-      setBalanceSyncStatus('⏳ Waiting for CoFHE to decrypt...');
-
       let attempts = 0;
       let ready = false;
       while (attempts < 6) {
+        setBalanceSyncStatus(`⏳ Waiting for CoFHE to decrypt... (attempt ${attempts + 1}/6)`);
         const [amountRaw, isReady] = await contract.getDecryptedBalance();
 
         if (isReady) {
@@ -622,13 +621,13 @@ export function EncryptDecryptCard({
         disabled={!isConnected || isProcessing}
       />
 
-      {hasEncryptedBalance && parseFloat(eEthBalance) === 0 && (
+      {(mode === 'decrypt' || mode === 'transfer') && hasEncryptedBalance && parseFloat(eEthBalance) === 0 && (
         <div className={`mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2.5 text-sm ${
           isLight
             ? 'border-blue-200 bg-blue-50 text-blue-800'
             : 'border-blue-700 bg-blue-900/30 text-blue-200'
         }`}>
-          <span>Encrypted balance detected. Sync to show your seETH (e.g. after receiving a transfer).</span>
+          <span>We detected an encrypted balance. Use &quot;Sync balance&quot; to decrypt and check your seETH manually.</span>
           <button
             type="button"
             onClick={handleSyncBalance}
@@ -686,7 +685,7 @@ export function EncryptDecryptCard({
             ? '🔓 Decryption complete! Click "CLAIM ETH" to receive your funds.'
             : (
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span>⏳ CoFHE is decrypting your withdrawal... This takes ~30 seconds.</span>
+                <span>⏳ CoFHE is decrypting your withdrawal. This usually completes in ~30 seconds. If it takes longer, click &quot;Check again&quot; or refresh the page.</span>
                 <button
                   type="button"
                   onClick={checkWithdrawalStatus}
