@@ -622,14 +622,18 @@ export function EncryptDecryptCard({
         disabled={!isConnected || isProcessing}
       />
 
-      {(mode === 'decrypt' || mode === 'transfer') && hasEncryptedBalance && parseFloat(eEthBalance) === 0 && (
-        <div className="mt-3 flex items-center justify-between rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-700">
-          <span>Encrypted balance detected. Sync to show your seETH.</span>
+      {hasEncryptedBalance && parseFloat(eEthBalance) === 0 && (
+        <div className={`mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2.5 text-sm ${
+          isLight
+            ? 'border-blue-200 bg-blue-50 text-blue-800'
+            : 'border-blue-700 bg-blue-900/30 text-blue-200'
+        }`}>
+          <span>Encrypted balance detected. Sync to show your seETH (e.g. after receiving a transfer).</span>
           <button
             type="button"
             onClick={handleSyncBalance}
             disabled={isBalanceSyncing}
-            className="rounded-lg bg-blue-600 px-2 py-1 text-[11px] font-bold text-white disabled:opacity-50"
+            className="shrink-0 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-50"
           >
             {isBalanceSyncing ? 'SYNCING...' : 'SYNC BALANCE'}
           </button>
