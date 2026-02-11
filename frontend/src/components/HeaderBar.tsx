@@ -28,8 +28,8 @@ export function HeaderBar({
   return (
     <header className="flex items-center justify-between">
       <div className="flex items-center gap-3">
-        <div className={`flex h-10 w-10 items-center justify-center rounded-full ${isLight ? 'bg-blue-50' : 'bg-slate-800'}`}>
-          <svg width="22" height="22" viewBox="0 0 40 40" fill="none">
+        <div className={`flex h-12 w-12 items-center justify-center rounded-full ${isLight ? 'bg-blue-50' : 'bg-slate-800'}`}>
+          <svg width="28" height="28" viewBox="0 0 40 40" fill="none">
             <circle cx="20" cy="20" r="20" fill={isLight ? '#E0F2FE' : '#1E293B'} />
             <path
               d="M20 10C14.4772 10 10 14.4772 10 20C10 25.5228 14.4772 30 20 30"
@@ -42,7 +42,7 @@ export function HeaderBar({
             <path d="M31 20L26 20" stroke="#0284C7" strokeWidth="3" strokeLinecap="round" />
           </svg>
         </div>
-        <span className={`text-base font-semibold tracking-[0.3em] ${isLight ? 'text-slate-900' : 'text-white'}`}>
+        <span className={`text-xl font-semibold tracking-[0.3em] ${isLight ? 'text-slate-900' : 'text-white'}`}>
           SPECTRE
         </span>
       </div>

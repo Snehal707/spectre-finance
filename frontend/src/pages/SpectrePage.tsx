@@ -108,7 +108,7 @@ export function SpectrePage() {
         )}
 
         <div className="grid w-full grid-cols-1 items-center gap-12 lg:grid-cols-2">
-          <HeroBlock />
+          <HeroBlock theme={theme} />
           <div className="flex w-full justify-center lg:justify-end">
             <EncryptDecryptCard
               theme={theme}

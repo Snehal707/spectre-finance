@@ -821,14 +821,6 @@ export function EncryptDecryptCard({
         </div>
       )}
 
-      {/* MetaMask warning banner - on mint tab */}
-      {mode === 'encrypt' && !showMintConfirm && !isProcessing && (
-        <div className={`mt-4 rounded-xl p-3 text-xs ${
-          isLight ? 'bg-amber-50 text-amber-800 border border-amber-200' : 'bg-amber-900/20 text-amber-300 border border-amber-800'
-        }`}>
-          If MetaMask warns, verify the contract address and tx hash on the block explorer before approving.
-        </div>
-      )}
     </div>
   );
 }
