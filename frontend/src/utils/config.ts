@@ -65,3 +65,10 @@ export const APP_CONFIG = {
 
 // Supported networks list
 export const SUPPORTED_NETWORKS = [SEPOLIA, ARB_SEPOLIA, BASE_SEPOLIA];
+
+/** Get display name for a chain ID (from SUPPORTED_NETWORKS or "Unknown") */
+export function getNetworkNameByChainId(chainId: number | null): string {
+  if (chainId == null) return 'Unknown';
+  const net = SUPPORTED_NETWORKS.find((n) => n.chainId === chainId);
+  return net?.name ?? 'Unknown';
+}

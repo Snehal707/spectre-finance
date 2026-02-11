@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { ethers } from 'ethers';
-import { DEFAULT_NETWORK } from '../utils/config';
+import { DEFAULT_NETWORK, getNetworkNameByChainId } from '../utils/config';
 import type { WalletState } from '../types';
 
 export function useWallet() {
@@ -12,8 +12,14 @@ export function useWallet() {
   });
   const [isConnecting, setIsConnecting] = useState(false);
 
-  // Check if on correct network
+  // Check if on correct network (Sepolia only - contract is deployed there)
   const isCorrectNetwork = wallet.chainId === DEFAULT_NETWORK.chainId;
+
+  // Display name for current chain (e.g. "Base Sepolia", "Sepolia", "Unknown")
+  const currentNetworkName = useMemo(
+    () => getNetworkNameByChainId(wallet.chainId),
+    [wallet.chainId]
+  );
 
   // Connect wallet
   const connect = useCallback(async () => {
@@ -144,6 +150,7 @@ export function useWallet() {
     wallet,
     isConnecting,
     isCorrectNetwork,
+    currentNetworkName,
     connect,
     disconnect,
     switchNetwork,

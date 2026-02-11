@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Eye, EyeOff, Loader2, Send, ArrowDownUp } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Eye, EyeOff, Loader2, Send, ArrowDownUp, RefreshCw } from 'lucide-react';
 import { ethers } from 'ethers';
 import { AmountPanel } from './AmountPanel';
 import { PercentSlider } from './PercentSlider';
@@ -16,6 +16,7 @@ type EncryptDecryptCardProps = {
   eEthBalance: string;
   isConnected: boolean;
   walletAddress: string | null;
+  isCorrectNetwork?: boolean;
   onBalanceUpdate: () => void;
 };
 
@@ -25,6 +26,7 @@ export function EncryptDecryptCard({
   eEthBalance, 
   isConnected,
   walletAddress,
+  isCorrectNetwork = true,
   onBalanceUpdate,
 }: EncryptDecryptCardProps) {
   const [mode, setMode] = useState<TabMode>('encrypt');
@@ -54,44 +56,46 @@ export function EncryptDecryptCard({
   const currentBalance = mode === 'encrypt' ? parseFloat(ethBalance) : parseFloat(eEthBalance);
   const displayBalance = isNaN(currentBalance) ? 0 : currentBalance;
 
-  // Check withdrawal status + encrypted balance using FHERC20 contract
-  useEffect(() => {
-    const checkWithdrawalStatus = async () => {
-      if (!isConnected || !walletAddress || !CONTRACT_ADDRESSES.spectreToken || !window.ethereum) {
-        setHasPendingWithdrawal(false);
-        setIsWithdrawalReady(false);
-        setHasEncryptedBalance(false);
-        return;
+  // Reusable withdrawal status check (for polling and "Check again" button)
+  const checkWithdrawalStatus = useCallback(async () => {
+    if (!isConnected || !walletAddress || !CONTRACT_ADDRESSES.spectreToken || !window.ethereum) {
+      setHasPendingWithdrawal(false);
+      setIsWithdrawalReady(false);
+      setHasEncryptedBalance(false);
+      return;
+    }
+
+    try {
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const contract = new ethers.Contract(
+        CONTRACT_ADDRESSES.spectreToken,
+        SPECTRE_TOKEN_ABI,
+        signer
+      );
+
+      const pending = await contract.hasPendingWithdrawal();
+      setHasPendingWithdrawal(pending);
+
+      if (pending) {
+        const ready = await contract.isWithdrawalReady();
+        setIsWithdrawalReady(ready);
       }
 
-      try {
-        const provider = new ethers.BrowserProvider(window.ethereum);
-        const signer = await provider.getSigner();
-        const contract = new ethers.Contract(
-          CONTRACT_ADDRESSES.spectreToken,
-          SPECTRE_TOKEN_ABI,
-          signer
-        );
-
-        const pending = await contract.hasPendingWithdrawal();
-        setHasPendingWithdrawal(pending);
-
-        if (pending) {
-          const ready = await contract.isWithdrawalReady();
-          setIsWithdrawalReady(ready);
-        }
-
-        const hasBal = await contract.userHasBalance();
-        setHasEncryptedBalance(hasBal);
-      } catch (err) {
-        console.error('Error checking withdrawal status:', err);
-      }
-    };
-
-    checkWithdrawalStatus();
-    const interval = setInterval(checkWithdrawalStatus, 5000);
-    return () => clearInterval(interval);
+      const hasBal = await contract.userHasBalance();
+      setHasEncryptedBalance(hasBal);
+    } catch (err) {
+      console.error('Error checking withdrawal status:', err);
+    }
   }, [isConnected, walletAddress]);
+
+  // Poll withdrawal status; faster (2s) when pending so "CLAIM" appears sooner
+  useEffect(() => {
+    checkWithdrawalStatus();
+    const intervalMs = hasPendingWithdrawal ? 2000 : 5000;
+    const interval = setInterval(checkWithdrawalStatus, intervalMs);
+    return () => clearInterval(interval);
+  }, [checkWithdrawalStatus, hasPendingWithdrawal]);
 
   // Reset when switching modes
   useEffect(() => {
@@ -483,6 +487,7 @@ export function EncryptDecryptCard({
 
   const isButtonDisabled = () => {
     if (!isConnected) return true;
+    if (!isCorrectNetwork) return true;
     if (isProcessing) return true;
     if (mode === 'encrypt' && parseFloat(amount) <= 0) return true;
     if (mode === 'transfer') {
@@ -670,12 +675,24 @@ export function EncryptDecryptCard({
       {mode === 'decrypt' && isPendingWithdrawal && (
         <div className={`mt-4 rounded-xl p-3 text-sm ${
           isWithdrawalReady 
-            ? 'bg-green-50 text-green-700 border border-green-200' 
-            : 'bg-yellow-50 text-yellow-700 border border-yellow-200'
+            ? (isLight ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-green-900/20 text-green-300 border border-green-800')
+            : (isLight ? 'bg-yellow-50 text-yellow-700 border border-yellow-200' : 'bg-yellow-900/20 text-yellow-300 border border-yellow-700')
         }`}>
           {isWithdrawalReady 
             ? '🔓 Decryption complete! Click "CLAIM ETH" to receive your funds.'
-            : '⏳ CoFHE is decrypting your withdrawal... This takes ~30 seconds.'}
+            : (
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span>⏳ CoFHE is decrypting your withdrawal... This takes ~30 seconds.</span>
+                <button
+                  type="button"
+                  onClick={checkWithdrawalStatus}
+                  className="flex items-center gap-1.5 rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-600"
+                >
+                  <RefreshCw size={14} />
+                  Check again
+                </button>
+              </div>
+            )}
         </div>
       )}
 
@@ -744,6 +761,15 @@ export function EncryptDecryptCard({
           isLight ? 'bg-yellow-50 text-yellow-700' : 'bg-yellow-900/30 text-yellow-400'
         }`}>
           Connect your wallet to start
+        </div>
+      )}
+
+      {/* Wrong network message */}
+      {isConnected && !isCorrectNetwork && (
+        <div className={`mt-4 rounded-xl p-3 text-center text-sm ${
+          isLight ? 'bg-amber-50 text-amber-800' : 'bg-amber-900/30 text-amber-200'
+        }`}>
+          Switch to Sepolia to mint, transfer, or burn.
         </div>
       )}
 

@@ -10,7 +10,7 @@ import { SPECTRE_TOKEN_ABI } from '../utils/fherc20-abi';
 
 export function SpectrePage() {
   const { theme, toggleTheme } = useTheme();
-  const { wallet, isConnecting, connect, disconnect, fetchBalance } = useWallet();
+  const { wallet, isConnecting, isCorrectNetwork, currentNetworkName, connect, disconnect, switchNetwork, fetchBalance } = useWallet();
   const isLight = theme === 'light';
 
   const [eEthBalance, setEEthBalance] = useState('0');
@@ -86,6 +86,27 @@ export function SpectrePage() {
           isConnecting={isConnecting}
         />
 
+        {wallet.isConnected && !isCorrectNetwork && (
+          <div
+            className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 ${
+              isLight
+                ? 'border-amber-200 bg-amber-50 text-amber-800'
+                : 'border-amber-700 bg-amber-900/30 text-amber-200'
+            }`}
+          >
+            <p className="text-sm font-medium">
+              You&apos;re on <strong>{currentNetworkName}</strong>. Spectre Finance is only on Sepolia.
+            </p>
+            <button
+              type="button"
+              onClick={switchNetwork}
+              className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-600"
+            >
+              Switch to Sepolia
+            </button>
+          </div>
+        )}
+
         <div className="grid w-full grid-cols-1 items-center gap-12 lg:grid-cols-2">
           <HeroBlock />
           <div className="flex w-full justify-center lg:justify-end">
@@ -95,6 +116,7 @@ export function SpectrePage() {
               eEthBalance={eEthBalance}
               isConnected={wallet.isConnected}
               walletAddress={wallet.address}
+              isCorrectNetwork={isCorrectNetwork}
               onBalanceUpdate={handleRefresh}
             />
           </div>
