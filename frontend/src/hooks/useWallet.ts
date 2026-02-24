@@ -1,161 +1,51 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
-import { ethers } from "ethers";
+import { useCallback, useMemo } from "react";
+import { useAccount, useBalance, useDisconnect, useSwitchChain } from "wagmi";
+import { useConnectModal } from "@rainbow-me/rainbowkit";
+import { formatEther } from "viem";
 import { DEFAULT_NETWORK, getNetworkNameByChainId } from "../utils/config";
-import type { WalletState } from "../types";
 
 export function useWallet() {
-  const [wallet, setWallet] = useState<WalletState>({
-    address: null,
-    isConnected: false,
-    chainId: null,
-    balance: "0",
-  });
-  const [isConnecting, setIsConnecting] = useState(false);
+  const { address, isConnected, chainId, status } = useAccount();
+  const { data: balanceData, refetch: refetchBalance } = useBalance({ address });
+  const { openConnectModal } = useConnectModal();
+  const { disconnect: wagmiDisconnect } = useDisconnect();
+  const { switchChain } = useSwitchChain();
 
-  // Check if on correct network (Sepolia only - contract is deployed there)
-  const isCorrectNetwork = wallet.chainId === DEFAULT_NETWORK.chainId;
+  const isCorrectNetwork = chainId === DEFAULT_NETWORK.chainId;
 
-  // Display name for current chain (e.g. "Base Sepolia", "Sepolia", "Unknown")
   const currentNetworkName = useMemo(
-    () => getNetworkNameByChainId(wallet.chainId),
-    [wallet.chainId]
+    () => getNetworkNameByChainId(chainId ?? null),
+    [chainId]
   );
 
-  // Connect wallet
-  const connect = useCallback(async () => {
-    if (typeof window.ethereum === "undefined") {
-      alert("Please install MetaMask to use Spectre Finance");
-      return;
-    }
+  const wallet = {
+    address: address ?? null,
+    isConnected,
+    chainId: chainId ?? null,
+    balance: balanceData
+      ? Number(formatEther(balanceData.value)).toFixed(4)
+      : "0",
+  };
 
-    setIsConnecting(true);
-    try {
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const accounts = await provider.send("eth_requestAccounts", []);
-      const network = await provider.getNetwork();
-      const balance = await provider.getBalance(accounts[0]);
+  const connect = useCallback(() => {
+    if (openConnectModal) openConnectModal();
+  }, [openConnectModal]);
 
-      setWallet({
-        address: accounts[0],
-        isConnected: true,
-        chainId: Number(network.chainId),
-        balance: ethers.formatEther(balance),
-      });
-    } catch (error) {
-      console.error("Failed to connect wallet:", error);
-    } finally {
-      setIsConnecting(false);
-    }
-  }, []);
-
-  // Disconnect wallet
   const disconnect = useCallback(() => {
-    setWallet({
-      address: null,
-      isConnected: false,
-      chainId: null,
-      balance: "0",
-    });
-  }, []);
+    wagmiDisconnect();
+  }, [wagmiDisconnect]);
 
-  // Fetch balance
   const fetchBalance = useCallback(async () => {
-    if (typeof window.ethereum === "undefined" || !wallet.address) return;
+    await refetchBalance();
+  }, [refetchBalance]);
 
-    try {
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const balance = await provider.getBalance(wallet.address);
-      setWallet((prev) => ({ ...prev, balance: ethers.formatEther(balance) }));
-    } catch (error) {
-      console.error("Failed to fetch balance:", error);
-    }
-  }, [wallet.address]);
-
-  // Switch to correct network (Sepolia)
   const switchNetwork = useCallback(async () => {
-    if (typeof window.ethereum === "undefined") return;
-
-    try {
-      await window.ethereum.request({
-        method: "wallet_switchEthereumChain",
-        params: [{ chainId: DEFAULT_NETWORK.chainIdHex }],
-      });
-    } catch (switchError: unknown) {
-      // Chain not added, add it (MetaMask uses code 4902 for "chain not added")
-      const code =
-        switchError &&
-        typeof switchError === "object" &&
-        "code" in switchError
-          ? (switchError as { code: number }).code
-          : undefined;
-      if (code === 4902) {
-        try {
-          await window.ethereum.request({
-            method: "wallet_addEthereumChain",
-            params: [
-              {
-                chainId: DEFAULT_NETWORK.chainIdHex,
-                chainName: DEFAULT_NETWORK.name,
-                nativeCurrency: DEFAULT_NETWORK.nativeCurrency,
-                rpcUrls: [DEFAULT_NETWORK.rpcUrl],
-                blockExplorerUrls: [DEFAULT_NETWORK.blockExplorer],
-              },
-            ],
-          });
-        } catch (addError) {
-          if (addError instanceof Error) console.error(addError.message);
-          else console.error(addError);
-        }
-      }
-    }
-  }, []);
-
-  // Listen for account/network changes
-  useEffect(() => {
-    if (typeof window.ethereum === "undefined") return;
-
-    const handleAccountsChanged = (...args: unknown[]) => {
-      const accounts = args[0] as string[];
-      if (accounts.length === 0) {
-        disconnect();
-      } else {
-        setWallet((prev) => ({ ...prev, address: accounts[0] }));
-      }
-    };
-
-    const handleChainChanged = (...args: unknown[]) => {
-      const chainId = args[0] as string;
-      setWallet((prev) => ({ ...prev, chainId: parseInt(chainId, 16) }));
-    };
-
-    window.ethereum.on("accountsChanged", handleAccountsChanged);
-    window.ethereum.on("chainChanged", handleChainChanged);
-
-    return () => {
-      window.ethereum?.removeListener("accountsChanged", handleAccountsChanged);
-      window.ethereum?.removeListener("chainChanged", handleChainChanged);
-    };
-  }, [disconnect]);
-
-  // Auto-connect if previously connected
-  useEffect(() => {
-    const checkConnection = async () => {
-      if (typeof window.ethereum === "undefined") return;
-
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const accounts = await provider.listAccounts();
-
-      if (accounts.length > 0) {
-        connect();
-      }
-    };
-
-    checkConnection();
-  }, [connect]);
+    switchChain({ chainId: DEFAULT_NETWORK.chainId });
+  }, [switchChain]);
 
   return {
     wallet,
-    isConnecting,
+    isConnecting: status === "connecting" || status === "reconnecting",
     isCorrectNetwork,
     currentNetworkName,
     connect,
