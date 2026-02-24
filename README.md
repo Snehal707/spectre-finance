@@ -5,7 +5,7 @@
 ![Fhenix](https://img.shields.io/badge/CoFHE-Fhenix-00D4FF)
 ![Sepolia](https://img.shields.io/badge/Network-Sepolia-blue)
 ![Solidity](https://img.shields.io/badge/Solidity-0.8.25-blue)
-![React](https://img.shields.io/badge/React-18-61DAFB)
+![React](https://img.shields.io/badge/React-19-61DAFB)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
 ## 🚀 Live Demo
@@ -31,7 +31,7 @@ Unlike traditional mixers, Spectre uses **Fully Homomorphic Encryption (FHE)** v
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                              USER                                        │
-│                         (MetaMask Wallet)                               │
+│               (MetaMask / Rainbow / Coinbase / WalletConnect)            │
 └─────────────────────────────┬───────────────────────────────────────────┘
                               │
                               ▼
@@ -75,12 +75,12 @@ Unlike traditional mixers, Spectre uses **Fully Homomorphic Encryption (FHE)** v
 
 ### DApp architecture
 
-**Stack:** User (MetaMask) → Frontend (Vite + React, Sepolia) → SpectreToken FHERC20 (Sepolia) → CoFHE coprocessor (off-chain decryption).
+**Stack:** User (RainbowKit multi-wallet) → Frontend (Vite + React, Sepolia) → SpectreToken FHERC20 (Sepolia) → CoFHE coprocessor (off-chain decryption).
 
 **Frontend:**
 - **Page:** `SpectrePage` (main app).
 - **Components:** `HeaderBar` (logo, connect, theme), `HeroBlock` (tagline, badges), `EncryptDecryptCard` (Mint / Transfer / Burn tabs, amount inputs, steps, Sync balance, claim).
-- **Hooks:** `useWallet` (connect, chainId, switch network), `useTheme`, `useCofhe` (optional: encrypt/unseal for fully private transfer).
+- **Hooks:** `useWallet` (RainbowKit/wagmi — connect, chainId, switch network), `useTheme`, `useCofhe` (optional: encrypt/unseal for fully private transfer).
 - **Config:** `config.ts` (Sepolia, contract addresses), `fherc20-abi.ts` (SpectreToken ABI).
 
 **Data flows:**
@@ -91,7 +91,7 @@ Unlike traditional mixers, Spectre uses **Fully Homomorphic Encryption (FHE)** v
 
 ```mermaid
 flowchart LR
-  User[MetaMask] --> Frontend[Vite React]
+  User[Wallet via RainbowKit] --> Frontend[Vite React]
   Frontend --> Contract[SpectreToken Sepolia]
   Contract --> CoFHE[CoFHE Coprocessor]
   CoFHE -.->|decrypt result| Contract
@@ -103,15 +103,15 @@ flowchart LR
 ## ⚡ Quick Start (1 Minute)
 
 ### Prerequisites
-- MetaMask wallet with Sepolia ETH ([Get from faucet](https://sepoliafaucet.com))
+- Any EVM wallet — MetaMask, Rainbow, Coinbase Wallet, or WalletConnect-compatible ([Get Sepolia ETH from faucet](https://sepoliafaucet.com))
 - Node.js 18+
 
 ### Try the Live App
 
 1. Go to https://spectre-finance-ukzc.vercel.app
-2. Connect MetaMask (switch to Sepolia network)
+2. Click **CONNECT** and pick your wallet (switch to Sepolia network)
 3. Enter an amount and click **MINT seETH**
-4. Confirm the transaction in MetaMask
+4. Confirm the transaction in your wallet
 5. Your ETH is now encrypted as seETH! ✨
 
 ### What You Should See
@@ -230,8 +230,10 @@ spectre-finance/
 │   │   │   └── ...
 │   │   ├── hooks/
 │   │   │   ├── useCofhe.ts        # FHE SDK integration
-│   │   │   └── useWallet.ts
+│   │   │   ├── useWallet.ts       # RainbowKit/wagmi wallet hook
+│   │   │   └── useTheme.ts
 │   │   └── utils/
+│   │       ├── wagmi.ts           # RainbowKit + wagmi config
 │   └── package.json
 ├── .github/
 │   └── workflows/
@@ -296,12 +298,18 @@ event WithdrawalClaimed(address indexed user);
 
 ## 🎨 Frontend Features
 
-- 🌓 **Dark/Light Theme** - Matrix/Cyberpunk aesthetic
-- 🔒 **Privacy Mode** - Encrypted balance display
-- 🤖 **Privacy Guard** - AI warns about round number deposits
-- 📱 **Responsive** - Works on desktop and mobile
-- ⏳ **Pending State UX** - Visual progress for 30s decrypt wait
-- 🦊 **MetaMask Compatible** - Indicated balance + Transfer events for wallet display
+- 🌓 **Dark/Light Theme** — Cyberpunk aesthetic with scanline overlays, cyber-grid, and clipped corners
+- 🌈 **RainbowKit Multi-Wallet** — MetaMask, Rainbow, Coinbase Wallet, WalletConnect
+- 🖥️ **SystemBoot Sequence** — Terminal-style startup animation (once per session)
+- ⚡ **SuccessEffect** — Full-screen white-out flash with per-action messages (Mint/Transfer/Burn)
+- 🔒 **Privacy Mode** — Encrypted balance display
+- 🤖 **Privacy Guard** — AI warns about round number deposits
+- 📋 **Transaction History** — Recent activity from localStorage with explorer links
+- 🏷️ **Feature Badges** — Modular Frame design with glowing accents
+- 📦 **AlertFrame System** — Tactical data-frame alerts (success/warn/error/info) with theme-aware text
+- 📱 **Responsive** — Works on desktop and mobile
+- ⏳ **Pending State UX** — Visual progress for 30s decrypt wait
+- 🦊 **Wallet Compatible** — Indicated balance + Transfer events for wallet display
 
 ---
 
