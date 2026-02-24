@@ -317,9 +317,9 @@ event WithdrawalClaimed(address indexed user);
 
 | Network | Chain ID | Status |
 |---------|----------|--------|
-| **Ethereum Sepolia** | 11155111 | ✅ Full support |
-| **Arbitrum Sepolia** | 421614 | ✅ Full support |
-| **Base Sepolia** | 84532 | ✅ Full support |
+| **Ethereum Sepolia** | 11155111 | ✅ Full support (contract deployed) |
+| **Arbitrum Sepolia** | 421614 | ⚙️ Config only (no contract deployed) |
+| **Base Sepolia** | 84532 | ⚙️ Config only (no contract deployed) |
 
 ---
 
