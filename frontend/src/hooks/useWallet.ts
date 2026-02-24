@@ -1,14 +1,14 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { ethers } from 'ethers';
-import { DEFAULT_NETWORK, getNetworkNameByChainId } from '../utils/config';
-import type { WalletState } from '../types';
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { ethers } from "ethers";
+import { DEFAULT_NETWORK, getNetworkNameByChainId } from "../utils/config";
+import type { WalletState } from "../types";
 
 export function useWallet() {
   const [wallet, setWallet] = useState<WalletState>({
     address: null,
     isConnected: false,
     chainId: null,
-    balance: '0',
+    balance: "0",
   });
   const [isConnecting, setIsConnecting] = useState(false);
 
@@ -23,15 +23,15 @@ export function useWallet() {
 
   // Connect wallet
   const connect = useCallback(async () => {
-    if (typeof window.ethereum === 'undefined') {
-      alert('Please install MetaMask to use Spectre Finance');
+    if (typeof window.ethereum === "undefined") {
+      alert("Please install MetaMask to use Spectre Finance");
       return;
     }
 
     setIsConnecting(true);
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
-      const accounts = await provider.send('eth_requestAccounts', []);
+      const accounts = await provider.send("eth_requestAccounts", []);
       const network = await provider.getNetwork();
       const balance = await provider.getBalance(accounts[0]);
 
@@ -42,7 +42,7 @@ export function useWallet() {
         balance: ethers.formatEther(balance),
       });
     } catch (error) {
-      console.error('Failed to connect wallet:', error);
+      console.error("Failed to connect wallet:", error);
     } finally {
       setIsConnecting(false);
     }
@@ -54,38 +54,44 @@ export function useWallet() {
       address: null,
       isConnected: false,
       chainId: null,
-      balance: '0',
+      balance: "0",
     });
   }, []);
 
   // Fetch balance
   const fetchBalance = useCallback(async () => {
-    if (typeof window.ethereum === 'undefined' || !wallet.address) return;
+    if (typeof window.ethereum === "undefined" || !wallet.address) return;
 
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
       const balance = await provider.getBalance(wallet.address);
       setWallet((prev) => ({ ...prev, balance: ethers.formatEther(balance) }));
     } catch (error) {
-      console.error('Failed to fetch balance:', error);
+      console.error("Failed to fetch balance:", error);
     }
   }, [wallet.address]);
 
   // Switch to correct network (Sepolia)
   const switchNetwork = useCallback(async () => {
-    if (typeof window.ethereum === 'undefined') return;
+    if (typeof window.ethereum === "undefined") return;
 
     try {
       await window.ethereum.request({
-        method: 'wallet_switchEthereumChain',
+        method: "wallet_switchEthereumChain",
         params: [{ chainId: DEFAULT_NETWORK.chainIdHex }],
       });
-    } catch (switchError: any) {
-      // Chain not added, add it
-      if (switchError.code === 4902) {
+    } catch (switchError: unknown) {
+      // Chain not added, add it (MetaMask uses code 4902 for "chain not added")
+      const code =
+        switchError &&
+        typeof switchError === "object" &&
+        "code" in switchError
+          ? (switchError as { code: number }).code
+          : undefined;
+      if (code === 4902) {
         try {
           await window.ethereum.request({
-            method: 'wallet_addEthereumChain',
+            method: "wallet_addEthereumChain",
             params: [
               {
                 chainId: DEFAULT_NETWORK.chainIdHex,
@@ -97,7 +103,8 @@ export function useWallet() {
             ],
           });
         } catch (addError) {
-          console.error('Failed to add network:', addError);
+          if (addError instanceof Error) console.error(addError.message);
+          else console.error(addError);
         }
       }
     }
@@ -105,7 +112,7 @@ export function useWallet() {
 
   // Listen for account/network changes
   useEffect(() => {
-    if (typeof window.ethereum === 'undefined') return;
+    if (typeof window.ethereum === "undefined") return;
 
     const handleAccountsChanged = (...args: unknown[]) => {
       const accounts = args[0] as string[];
@@ -121,19 +128,19 @@ export function useWallet() {
       setWallet((prev) => ({ ...prev, chainId: parseInt(chainId, 16) }));
     };
 
-    window.ethereum.on('accountsChanged', handleAccountsChanged);
-    window.ethereum.on('chainChanged', handleChainChanged);
+    window.ethereum.on("accountsChanged", handleAccountsChanged);
+    window.ethereum.on("chainChanged", handleChainChanged);
 
     return () => {
-      window.ethereum?.removeListener('accountsChanged', handleAccountsChanged);
-      window.ethereum?.removeListener('chainChanged', handleChainChanged);
+      window.ethereum?.removeListener("accountsChanged", handleAccountsChanged);
+      window.ethereum?.removeListener("chainChanged", handleChainChanged);
     };
   }, [disconnect]);
 
   // Auto-connect if previously connected
   useEffect(() => {
     const checkConnection = async () => {
-      if (typeof window.ethereum === 'undefined') return;
+      if (typeof window.ethereum === "undefined") return;
 
       const provider = new ethers.BrowserProvider(window.ethereum);
       const accounts = await provider.listAccounts();

@@ -1,8 +1,8 @@
-import { useState, useCallback, useEffect } from 'react';
-import { ethers } from 'ethers';
-import { SPECTRE_VAULT_ABI } from '../utils/abi';
-import { CONTRACT_ADDRESSES } from '../utils/config';
-import type { VaultState, TransactionStatus } from '../types';
+import { useState, useCallback, useEffect } from "react";
+import { ethers } from "ethers";
+import { SPECTRE_VAULT_ABI } from "../utils/abi";
+import { CONTRACT_ADDRESSES } from "../utils/config";
+import type { VaultState, TransactionStatus } from "../types";
 
 export function useFhenix(address: string | null) {
   const [vaultState, setVaultState] = useState<VaultState>({
@@ -10,7 +10,7 @@ export function useFhenix(address: string | null) {
     hasBalance: false,
     hasPendingWithdrawal: false,
     isWithdrawalReady: false,
-    tvl: '0',
+    tvl: "0",
   });
 
   const [txStatus, setTxStatus] = useState<TransactionStatus>({
@@ -23,12 +23,12 @@ export function useFhenix(address: string | null) {
 
   // Get contract instance
   const getContract = useCallback(async (needsSigner = false) => {
-    if (typeof window.ethereum === 'undefined') {
-      throw new Error('No wallet detected');
+    if (typeof window.ethereum === "undefined") {
+      throw new Error("No wallet detected");
     }
 
     const provider = new ethers.BrowserProvider(window.ethereum);
-    
+
     if (needsSigner) {
       const signer = await provider.getSigner();
       return new ethers.Contract(
@@ -51,7 +51,7 @@ export function useFhenix(address: string | null) {
 
     try {
       const contract = await getContract();
-      
+
       const [tvl, hasBalance, hasPendingWithdrawal] = await Promise.all([
         contract.totalValueLocked(),
         contract.hasBalance(address),
@@ -68,101 +68,109 @@ export function useFhenix(address: string | null) {
       }
 
       setVaultState({
-        encryptedBalance: hasBalance ? 'ENCRYPTED' : null,
+        encryptedBalance: hasBalance ? "ENCRYPTED" : null,
         hasBalance,
         hasPendingWithdrawal,
         isWithdrawalReady,
         tvl: ethers.formatEther(tvl),
       });
     } catch (error) {
-      console.error('Failed to fetch vault state:', error);
+      console.error("Failed to fetch vault state:", error);
     }
   }, [address, getContract]);
 
   // Deposit ETH
-  const deposit = useCallback(async (amount: string) => {
-    setTxStatus({
-      isLoading: true,
-      isSuccess: false,
-      isError: false,
-      error: null,
-      txHash: null,
-    });
-
-    try {
-      const contract = await getContract(true);
-      const tx = await contract.deposit({
-        value: ethers.parseEther(amount),
-      });
-
-      setTxStatus((prev) => ({ ...prev, txHash: tx.hash }));
-
-      await tx.wait();
-
+  const deposit = useCallback(
+    async (amount: string) => {
       setTxStatus({
-        isLoading: false,
-        isSuccess: true,
+        isLoading: true,
+        isSuccess: false,
         isError: false,
         error: null,
-        txHash: tx.hash,
-      });
-
-      // Refresh vault state
-      await refreshVaultState();
-
-      return tx.hash;
-    } catch (error: any) {
-      setTxStatus({
-        isLoading: false,
-        isSuccess: false,
-        isError: true,
-        error: error.message || 'Transaction failed',
         txHash: null,
       });
-      throw error;
-    }
-  }, [getContract, refreshVaultState]);
+
+      try {
+        const contract = await getContract(true);
+        const tx = await contract.deposit({
+          value: ethers.parseEther(amount),
+        });
+
+        setTxStatus((prev) => ({ ...prev, txHash: tx.hash }));
+
+        await tx.wait();
+
+        setTxStatus({
+          isLoading: false,
+          isSuccess: true,
+          isError: false,
+          error: null,
+          txHash: tx.hash,
+        });
+
+        // Refresh vault state
+        await refreshVaultState();
+
+        return tx.hash;
+      } catch (error: unknown) {
+        setTxStatus({
+          isLoading: false,
+          isSuccess: false,
+          isError: true,
+          error:
+            error instanceof Error ? error.message : "Transaction failed",
+          txHash: null,
+        });
+        throw error;
+      }
+    },
+    [getContract, refreshVaultState]
+  );
 
   // Request withdrawal (Step 1)
-  const requestWithdraw = useCallback(async (encryptedAmount: Uint8Array) => {
-    setTxStatus({
-      isLoading: true,
-      isSuccess: false,
-      isError: false,
-      error: null,
-      txHash: null,
-    });
-
-    try {
-      const contract = await getContract(true);
-      const tx = await contract.requestWithdraw(encryptedAmount);
-
-      setTxStatus((prev) => ({ ...prev, txHash: tx.hash }));
-
-      await tx.wait();
-
+  const requestWithdraw = useCallback(
+    async (encryptedAmount: Uint8Array) => {
       setTxStatus({
-        isLoading: false,
-        isSuccess: true,
+        isLoading: true,
+        isSuccess: false,
         isError: false,
         error: null,
-        txHash: tx.hash,
-      });
-
-      await refreshVaultState();
-
-      return tx.hash;
-    } catch (error: any) {
-      setTxStatus({
-        isLoading: false,
-        isSuccess: false,
-        isError: true,
-        error: error.message || 'Transaction failed',
         txHash: null,
       });
-      throw error;
-    }
-  }, [getContract, refreshVaultState]);
+
+      try {
+        const contract = await getContract(true);
+        const tx = await contract.requestWithdraw(encryptedAmount);
+
+        setTxStatus((prev) => ({ ...prev, txHash: tx.hash }));
+
+        await tx.wait();
+
+        setTxStatus({
+          isLoading: false,
+          isSuccess: true,
+          isError: false,
+          error: null,
+          txHash: tx.hash,
+        });
+
+        await refreshVaultState();
+
+        return tx.hash;
+      } catch (error: unknown) {
+        setTxStatus({
+          isLoading: false,
+          isSuccess: false,
+          isError: true,
+          error:
+            error instanceof Error ? error.message : "Transaction failed",
+          txHash: null,
+        });
+        throw error;
+      }
+    },
+    [getContract, refreshVaultState]
+  );
 
   // Claim withdrawal (Step 2)
   const claimWithdraw = useCallback(async () => {
@@ -193,12 +201,13 @@ export function useFhenix(address: string | null) {
       await refreshVaultState();
 
       return tx.hash;
-    } catch (error: any) {
+    } catch (error: unknown) {
       setTxStatus({
         isLoading: false,
         isSuccess: false,
         isError: true,
-        error: error.message || 'Transaction failed',
+        error:
+          error instanceof Error ? error.message : "Transaction failed",
         txHash: null,
       });
       throw error;
@@ -206,45 +215,49 @@ export function useFhenix(address: string | null) {
   }, [getContract, refreshVaultState]);
 
   // Transfer (requires encrypted amount from cofhejs)
-  const transfer = useCallback(async (to: string, encryptedAmount: Uint8Array) => {
-    setTxStatus({
-      isLoading: true,
-      isSuccess: false,
-      isError: false,
-      error: null,
-      txHash: null,
-    });
-
-    try {
-      const contract = await getContract(true);
-      const tx = await contract.transfer(to, encryptedAmount);
-
-      setTxStatus((prev) => ({ ...prev, txHash: tx.hash }));
-
-      await tx.wait();
-
+  const transfer = useCallback(
+    async (to: string, encryptedAmount: Uint8Array) => {
       setTxStatus({
-        isLoading: false,
-        isSuccess: true,
+        isLoading: true,
+        isSuccess: false,
         isError: false,
         error: null,
-        txHash: tx.hash,
-      });
-
-      await refreshVaultState();
-
-      return tx.hash;
-    } catch (error: any) {
-      setTxStatus({
-        isLoading: false,
-        isSuccess: false,
-        isError: true,
-        error: error.message || 'Transaction failed',
         txHash: null,
       });
-      throw error;
-    }
-  }, [getContract, refreshVaultState]);
+
+      try {
+        const contract = await getContract(true);
+        const tx = await contract.transfer(to, encryptedAmount);
+
+        setTxStatus((prev) => ({ ...prev, txHash: tx.hash }));
+
+        await tx.wait();
+
+        setTxStatus({
+          isLoading: false,
+          isSuccess: true,
+          isError: false,
+          error: null,
+          txHash: tx.hash,
+        });
+
+        await refreshVaultState();
+
+        return tx.hash;
+      } catch (error: unknown) {
+        setTxStatus({
+          isLoading: false,
+          isSuccess: false,
+          isError: true,
+          error:
+            error instanceof Error ? error.message : "Transaction failed",
+          txHash: null,
+        });
+        throw error;
+      }
+    },
+    [getContract, refreshVaultState]
+  );
 
   // Reset transaction status
   const resetTxStatus = useCallback(() => {
@@ -257,8 +270,10 @@ export function useFhenix(address: string | null) {
     });
   }, []);
 
-  // Auto-refresh vault state
+  // Auto-refresh vault state: run once on mount then every 30s. Intentional
+  // setState-in-effect (refreshVaultState updates vault state); timing unchanged.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: mount + 30s polling
     refreshVaultState();
 
     // Refresh every 30 seconds
