@@ -1,3 +1,5 @@
+import { Button } from "./ui/Button";
+
 type AmountPanelProps = {
   label: string;
   token: string;
@@ -18,11 +20,13 @@ export function AmountPanel({
   disabled = false,
 }: AmountPanelProps) {
   return (
-    <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-5 shadow-inner">
+    <div className="rounded-2xl border border-spectre-border-soft bg-spectre-card-soft/50 p-5 shadow-inner">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-bold uppercase tracking-widest text-slate-400">{label}</span>
-        <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-bold text-slate-600">
-          <span className="h-2.5 w-2.5 rounded-full bg-blue-600" />
+        <span className="font-cyber text-xs font-bold uppercase tracking-widest text-spectre-muted">
+          {label}
+        </span>
+        <div className="flex items-center gap-2 rounded-full border border-spectre-border-soft bg-spectre-card px-3 py-1 text-xs font-bold text-spectre-text">
+          <span className="h-2.5 w-2.5 rounded-full bg-spectre-accent" />
           {token}
         </div>
       </div>
@@ -33,25 +37,20 @@ export function AmountPanel({
           value={amount}
           onChange={(event) => onAmountChange(event.target.value)}
           disabled={disabled}
-          className={`w-full bg-transparent text-4xl font-bold tracking-tight text-slate-900 outline-none ${
-            disabled ? 'opacity-50 cursor-not-allowed' : ''
+          className={`w-full bg-transparent font-mono text-4xl font-bold tracking-tight text-spectre-text outline-none placeholder:text-spectre-muted ${
+            disabled ? "cursor-not-allowed opacity-50" : ""
           }`}
           placeholder="0"
         />
       </div>
 
-      <div className="mt-3 flex items-center justify-between border-t border-slate-200/70 pt-3">
-        <span className="text-xs text-slate-500">
+      <div className="mt-3 flex items-center justify-between border-t border-spectre-border-soft/70 pt-3">
+        <span className="text-xs text-spectre-muted">
           Balance: <span className="font-mono">{balance}</span>
         </span>
-        <button
-          type="button"
-          onClick={onMax}
-          disabled={disabled}
-          className="rounded-lg bg-blue-600 px-3 py-1 text-xs font-bold text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700 transition"
-        >
+        <Button size="sm" onClick={onMax} disabled={disabled}>
           MAX
-        </button>
+        </Button>
       </div>
     </div>
   );

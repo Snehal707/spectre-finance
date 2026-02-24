@@ -1,24 +1,40 @@
-import { useState, useEffect, useCallback } from 'react';
-import { ethers } from 'ethers';
-import { HeaderBar } from '../components/HeaderBar';
-import { HeroBlock } from '../components/HeroBlock';
-import { EncryptDecryptCard } from '../components/EncryptDecryptCard';
-import { useTheme } from '../hooks/useTheme';
-import { useWallet } from '../hooks/useWallet';
-import { CONTRACT_ADDRESSES } from '../utils/config';
-import { SPECTRE_TOKEN_ABI } from '../utils/fherc20-abi';
+import { useCallback, useEffect, useState } from "react";
+import { ethers } from "ethers";
+
+import { Button } from "../components/ui/Button";
+import { EncryptDecryptCard } from "../components/EncryptDecryptCard";
+import { HeaderBar } from "../components/HeaderBar";
+import { HeroBlock } from "../components/HeroBlock";
+import { useTheme } from "../hooks/useTheme";
+import { useWallet } from "../hooks/useWallet";
+import { CONTRACT_ADDRESSES } from "../utils/config";
+import { SPECTRE_TOKEN_ABI } from "../utils/fherc20-abi";
 
 export function SpectrePage() {
   const { theme, toggleTheme } = useTheme();
-  const { wallet, isConnecting, isCorrectNetwork, currentNetworkName, connect, disconnect, switchNetwork, fetchBalance } = useWallet();
-  const isLight = theme === 'light';
+  const {
+    wallet,
+    isConnecting,
+    isCorrectNetwork,
+    currentNetworkName,
+    connect,
+    disconnect,
+    switchNetwork,
+    fetchBalance,
+  } = useWallet();
+  const isLight = theme === "light";
 
-  const [eEthBalance, setEEthBalance] = useState('0');
+  const [eEthBalance, setEEthBalance] = useState("0");
 
   // Fetch seETH balance from FHERC20 contract
   const fetchVaultStatus = useCallback(async () => {
-    if (!wallet.isConnected || !wallet.address || !CONTRACT_ADDRESSES.spectreToken || !window.ethereum) {
-      setEEthBalance('0');
+    if (
+      !wallet.isConnected ||
+      !wallet.address ||
+      !CONTRACT_ADDRESSES.spectreToken ||
+      !window.ethereum
+    ) {
+      setEEthBalance("0");
       return;
     }
 
@@ -36,25 +52,28 @@ export function SpectrePage() {
 
       // Normalize wallet address to lowercase for consistent localStorage keys
       const normalizedAddress = wallet.address.toLowerCase();
-      
+
       if (hasBalance) {
         // We track it locally since balance is encrypted
-        const stored = localStorage.getItem(`spectre_eeth_${normalizedAddress}`);
-        setEEthBalance(stored || '0.0000');
+        const stored = localStorage.getItem(
+          `spectre_eeth_${normalizedAddress}`
+        );
+        setEEthBalance(stored || "0.0000");
       } else {
-        setEEthBalance('0');
+        setEEthBalance("0");
       }
     } catch (err) {
-      console.error('Error fetching seETH balance:', err);
+      console.error("Error fetching seETH balance:", err);
       // On error, try to use localStorage value
       const normalizedAddress = wallet.address.toLowerCase();
       const stored = localStorage.getItem(`spectre_eeth_${normalizedAddress}`);
-      setEEthBalance(stored || '0');
+      setEEthBalance(stored || "0");
     }
   }, [wallet.isConnected, wallet.address]);
 
   // Initial fetch and polling
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: initial fetch + 10s polling
     fetchVaultStatus();
     const interval = setInterval(fetchVaultStatus, 10000);
     return () => clearInterval(interval);
@@ -68,46 +87,46 @@ export function SpectrePage() {
 
   return (
     <div
-      className={`min-h-screen ${isLight ? 'bg-[#f0f7ff]' : 'bg-slate-950'}`}
-      style={{
-        backgroundImage: `linear-gradient(${isLight ? 'rgba(37, 99, 235, 0.08)' : 'rgba(59, 130, 246, 0.08)'} 1px, transparent 1px),
-                          linear-gradient(90deg, ${isLight ? 'rgba(37, 99, 235, 0.08)' : 'rgba(59, 130, 246, 0.08)'} 1px, transparent 1px)`,
-        backgroundSize: '48px 48px',
-      }}
+      className={`min-h-screen ${
+        isLight ? "bg-[#020617]" : "bg-spectre-bg"
+      } bg-cyber-grid`}
     >
-      <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-10 px-6 pb-16 pt-8 lg:px-10">
-        <HeaderBar
-          theme={theme}
-          onToggleTheme={toggleTheme}
-          walletAddress={wallet.address}
-          isConnected={wallet.isConnected}
-          onConnect={connect}
-          onDisconnect={disconnect}
-          isConnecting={isConnecting}
-        />
+      {/* Top navbar – Stitch: logo, theme toggle, wallet connect, network badge */}
+      <header className="sticky top-0 z-10 border-b border-spectre-border-soft/60 bg-spectre-card/50 backdrop-blur-xl">
+        <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-6 py-4 lg:px-10">
+          <HeaderBar
+            theme={theme}
+            onToggleTheme={toggleTheme}
+            walletAddress={wallet.address}
+            isConnected={wallet.isConnected}
+            onConnect={connect}
+            onDisconnect={disconnect}
+            isConnecting={isConnecting}
+          />
+        </div>
+      </header>
 
+      <main className="mx-auto w-full max-w-7xl flex-col gap-10 px-6 pb-16 pt-8 lg:px-10">
         {wallet.isConnected && !isCorrectNetwork && (
           <div
-            className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 ${
+            className={`mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 ${
               isLight
-                ? 'border-amber-200 bg-amber-50 text-amber-800'
-                : 'border-amber-700 bg-amber-900/30 text-amber-200'
+                ? "border-amber-200 bg-amber-50 text-amber-800"
+                : "border-amber-700 bg-amber-900/30 text-amber-200"
             }`}
           >
             <p className="text-sm font-medium">
-              You&apos;re on <strong>{currentNetworkName}</strong>. Spectre Finance is only on Sepolia.
+              You&apos;re on <strong>{currentNetworkName}</strong>. Spectre
+              Finance is only on Sepolia.
             </p>
-            <button
-              type="button"
-              onClick={switchNetwork}
-              className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-600"
-            >
+            <Button onClick={switchNetwork} size="md">
               Switch to Sepolia
-            </button>
+            </Button>
           </div>
         )}
 
-        <div className="grid w-full grid-cols-1 items-center gap-12 lg:grid-cols-2">
+        {/* Stitch: 2-column grid – hero left, primary action card right */}
+        <section className="grid w-full grid-cols-1 items-start gap-10 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
           <HeroBlock theme={theme} />
           <div className="flex w-full justify-center lg:justify-end">
             <EncryptDecryptCard
@@ -120,8 +139,21 @@ export function SpectrePage() {
               onBalanceUpdate={handleRefresh}
             />
           </div>
-        </div>
-      </div>
+        </section>
+
+        {/* Stitch: Recent activity section – table-friendly spacing */}
+        <section className="mt-12 flex flex-col gap-4">
+          <h2 className="font-cyber text-sm font-semibold uppercase tracking-wider text-spectre-muted">
+            Recent activity
+          </h2>
+          <div className="spectre-glass-soft overflow-hidden rounded-spectre-lg border border-spectre-border-soft/60">
+            <div className="min-h-[120px] px-4 py-6 text-center text-sm text-spectre-muted">
+              No recent transactions. Encrypt, transfer, or withdraw to see
+              activity here.
+            </div>
+          </div>
+        </section>
+      </main>
     </div>
   );
 }

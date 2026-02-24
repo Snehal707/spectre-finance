@@ -1,5 +1,7 @@
-import { useState, useEffect } from 'react';
-import { AlertTriangle, Shield, X } from 'lucide-react';
+import { useEffect, useState } from "react";
+import { AlertTriangle, Shield, X } from "lucide-react";
+
+import { Button } from "./ui/Button";
 
 interface PrivacyGuardProps {
   amount: string;
@@ -16,7 +18,9 @@ export function PrivacyGuard({ amount, onSuggestedAmount }: PrivacyGuardProps) {
   const [suggestedAmount, setSuggestedAmount] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState(false);
 
+  // Derive warning/suggested from amount and dismissed; intentional setState-in-effect to sync UI with props.
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- derived state from amount/dismissed */
     if (!amount || dismissed) {
       setWarning(null);
       setSuggestedAmount(null);
@@ -31,26 +35,27 @@ export function PrivacyGuard({ amount, onSuggestedAmount }: PrivacyGuardProps) {
     }
 
     // Check if amount is too "round" (potential metadata leakage)
-    const isRoundNumber = 
+    const isRoundNumber =
       numAmount === Math.floor(numAmount) || // Whole number
-      (numAmount * 10) === Math.floor(numAmount * 10) || // One decimal
+      numAmount * 10 === Math.floor(numAmount * 10) || // One decimal
       numAmount % 0.5 === 0; // Half values
 
     if (isRoundNumber && numAmount >= 0.1) {
       // Generate a random offset (0.1% to 5% of the amount)
       const randomOffset = numAmount * (0.001 + Math.random() * 0.049);
       const randomDirection = Math.random() > 0.5 ? 1 : -1;
-      const suggested = numAmount + (randomOffset * randomDirection);
-      
+      const suggested = numAmount + randomOffset * randomDirection;
+
       setWarning(
         `Round numbers like ${amount} can leak metadata about your transaction. ` +
-        `Consider using a randomized amount for better privacy.`
+          `Consider using a randomized amount for better privacy.`
       );
       setSuggestedAmount(suggested.toFixed(4));
     } else {
       setWarning(null);
       setSuggestedAmount(null);
     }
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [amount, dismissed]);
 
   const handleUseSuggested = () => {
@@ -64,50 +69,53 @@ export function PrivacyGuard({ amount, onSuggestedAmount }: PrivacyGuardProps) {
     setDismissed(true);
   };
 
-  // Reset dismissed state when amount changes significantly
+  // Reset dismissed state when amount changes significantly (bucket by 0.1)
+  const amountBucket = Number.isNaN(parseFloat(amount))
+    ? 0
+    : Math.floor(parseFloat(amount) * 10);
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset dismissed when amount bucket changes
     setDismissed(false);
-  }, [Math.floor(parseFloat(amount) * 10)]);
+  }, [amountBucket]);
 
   if (!warning) return null;
 
   return (
-    <div className="mt-4 p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/30 relative">
-      <button
+    <div className="spectre-glass-soft relative mt-4 rounded-xl border border-spectre-warn/30 p-4">
+      <Button
+        variant="ghost"
+        size="sm"
         onClick={handleDismiss}
-        className="absolute top-2 right-2 text-yellow-500/70 hover:text-yellow-500"
+        aria-label="Dismiss"
+        className="absolute right-2 top-2 min-w-0 p-1 text-spectre-warn hover:bg-spectre-warn/10"
       >
         <X size={16} />
-      </button>
-      
+      </Button>
+
       <div className="flex items-start gap-3">
-        <div className="flex-shrink-0">
-          <div className="w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center">
-            <AlertTriangle className="w-5 h-5 text-yellow-500" />
-          </div>
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-spectre-warn/20">
+          <AlertTriangle className="h-5 w-5 text-spectre-warn" />
         </div>
-        
+
         <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <Shield className="w-4 h-4 text-fhenix-blue" />
-            <span className="text-sm font-semibold text-yellow-500">
+          <div className="mb-1 flex items-center gap-2">
+            <Shield className="h-4 w-4 text-spectre-accent" />
+            <span className="text-sm font-semibold text-spectre-warn">
               Privacy Guard
             </span>
           </div>
-          
-          <p className="text-sm text-gray-300 mb-3">
-            {warning}
-          </p>
-          
+
+          <p className="mb-3 text-sm text-spectre-muted">{warning}</p>
+
           {suggestedAmount && (
-            <button
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={handleUseSuggested}
-              className="px-4 py-2 bg-fhenix-blue/20 border border-fhenix-blue/50 rounded-lg 
-                       text-fhenix-blue text-sm font-medium hover:bg-fhenix-blue/30 
-                       transition-colors"
+              className="border-spectre-accent/50 bg-spectre-accent/10 text-spectre-accent hover:bg-spectre-accent/20"
             >
               Use suggested: {suggestedAmount} ETH
-            </button>
+            </Button>
           )}
         </div>
       </div>
