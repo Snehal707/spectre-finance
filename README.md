@@ -10,7 +10,7 @@
 
 ## 🚀 Live Demo
 
-- **Website:** https://spectre-finance-ukzc.vercel.app
+- **Website:** https://spectrefinance.vercel.app
 - **Contract (Sepolia):** [`0x751111805C4c8a014da9f040199d040788d61347`](https://sepolia.etherscan.io/address/0x751111805C4c8a014da9f040199d040788d61347) (SpectreToken V7)
 
 ---
@@ -108,7 +108,7 @@ flowchart LR
 
 ### Try the Live App
 
-1. Go to https://spectre-finance-ukzc.vercel.app
+1. Go to https://spectrefinance.vercel.app
 2. Click **CONNECT** and pick your wallet (switch to Sepolia network)
 3. Enter an amount and click **MINT seETH**
 4. Confirm the transaction in your wallet
@@ -195,11 +195,14 @@ npm test
 ### 4. Deploy Contract
 
 ```bash
-# Deploy to Sepolia
+# Deploy to Sepolia (primary)
 npm run deploy:sepolia
 
 # Or Arbitrum Sepolia (lower gas)
 npm run deploy:arb-sepolia
+
+# Or Base Sepolia
+npm run deploy:base-sepolia
 ```
 
 ### 5. Run Frontend
@@ -216,28 +219,37 @@ npm run dev
 ```
 spectre-finance/
 ├── contracts/
-│   ├── SpectreToken.sol        # FHERC20 token (V7 - Redact-style balanceOf)
-│   └── SpectreVault.sol        # FHE vault (legacy V3)
+│   ├── SpectreToken.sol          # FHERC20 token (V7 - Redact-style balanceOf)
+│   └── SpectreVault.sol          # FHE vault (legacy V3)
 ├── scripts/
-│   └── deploy.js               # Deployment script
+│   └── deploy.js                 # Deployment script
 ├── test/
-│   └── SpectreVault.test.js    # Contract tests
+│   └── SpectreVault.test.js      # Contract tests
 ├── frontend/
 │   ├── src/
-│   │   ├── components/         # React components
-│   │   │   ├── SpectreInterface.tsx
-│   │   │   ├── PrivacyGuard.tsx   # AI warning for round numbers
-│   │   │   └── ...
+│   │   ├── pages/
+│   │   │   └── SpectrePage.tsx       # Main app page (boot, parallax, layout)
+│   │   ├── components/
+│   │   │   ├── HeaderBar.tsx         # Logo, wallet connect, theme toggle
+│   │   │   ├── HeroBlock.tsx         # Hero tagline, feature badges
+│   │   │   ├── EncryptDecryptCard.tsx # Mint / Transfer / Burn flow
+│   │   │   ├── AmountPanel.tsx       # Amount input with token badge
+│   │   │   ├── PercentSlider.tsx     # Percentage slider
+│   │   │   ├── PrivacyGuard.tsx      # AI warning for round numbers
+│   │   │   └── ui/                   # Reusable UI kit (Button, Card, Input, Tabs, etc.)
 │   │   ├── hooks/
-│   │   │   ├── useCofhe.ts        # FHE SDK integration
-│   │   │   ├── useWallet.ts       # RainbowKit/wagmi wallet hook
-│   │   │   └── useTheme.ts
-│   │   └── utils/
-│   │       ├── wagmi.ts           # RainbowKit + wagmi config
+│   │   │   ├── useCofhe.ts           # FHE SDK integration
+│   │   │   ├── useWallet.ts          # RainbowKit/wagmi wallet hook
+│   │   │   └── useTheme.ts           # Dark/light theme toggle
+│   │   ├── utils/
+│   │   │   ├── wagmi.ts              # RainbowKit + wagmi config
+│   │   │   ├── config.ts             # Network & contract addresses
+│   │   │   └── fherc20-abi.ts        # SpectreToken ABI
+│   │   └── index.css                 # Tailwind v4 theme tokens & cyberpunk utilities
 │   └── package.json
 ├── .github/
 │   └── workflows/
-│       └── ci.yml              # Lint, typecheck, test on push
+│       └── ci.yml                # Compile, lint, build on push
 ├── hardhat.config.js
 ├── env.example
 └── package.json
@@ -355,6 +367,8 @@ MIT License - see [LICENSE](LICENSE) file.
 ## 🙏 Credits
 
 Built with:
-- **Fhenix Protocol** - CoFHE infrastructure
-- **Official Fhenix Tools** - cofhe-hardhat-plugin, cofhe-contracts
-- **Redact Money** - UI inspiration
+- **Fhenix Protocol** — CoFHE infrastructure
+- **Official Fhenix Tools** — cofhe-hardhat-plugin, cofhe-contracts
+- **RainbowKit** — Multi-wallet connection modal
+- **wagmi + viem** — React hooks for Ethereum
+- **Redact Money** — UI inspiration
