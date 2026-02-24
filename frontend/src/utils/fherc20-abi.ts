@@ -22,7 +22,7 @@ export const SPECTRE_TOKEN_ABI = [
     stateMutability: "view",
     type: "function",
   },
-  
+
   // ============ View Functions ============
   {
     inputs: [],
@@ -97,7 +97,7 @@ export const SPECTRE_TOKEN_ABI = [
     stateMutability: "view",
     type: "function",
   },
-  
+
   // ============ Mint (ETH -> seETH) ============
   {
     inputs: [],
@@ -106,7 +106,7 @@ export const SPECTRE_TOKEN_ABI = [
     stateMutability: "payable",
     type: "function",
   },
-  
+
   // ============ Transfer Functions (Encrypted!) ============
   // Plain version for simpler testing
   {
@@ -140,7 +140,7 @@ export const SPECTRE_TOKEN_ABI = [
     stateMutability: "nonpayable",
     type: "function",
   },
-  
+
   // ============ Approve Functions ============
   {
     inputs: [
@@ -152,7 +152,7 @@ export const SPECTRE_TOKEN_ABI = [
     stateMutability: "nonpayable",
     type: "function",
   },
-  
+
   // ============ Burn Functions (seETH -> ETH) ============
   {
     // Burn specific amount (plaintext for testing)
@@ -178,7 +178,7 @@ export const SPECTRE_TOKEN_ABI = [
     stateMutability: "nonpayable",
     type: "function",
   },
-  
+
   // ============ Balance Viewing ============
   {
     inputs: [],
@@ -197,14 +197,19 @@ export const SPECTRE_TOKEN_ABI = [
     stateMutability: "view",
     type: "function",
   },
-  
+
   // ============ Events ============
   {
     anonymous: false,
     inputs: [
       { indexed: true, internalType: "address", name: "from", type: "address" },
       { indexed: true, internalType: "address", name: "to", type: "address" },
-      { indexed: false, internalType: "uint256", name: "value", type: "uint256" },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "value",
+        type: "uint256",
+      },
     ],
     name: "Transfer",
     type: "event",
@@ -212,33 +217,51 @@ export const SPECTRE_TOKEN_ABI = [
   {
     anonymous: false,
     inputs: [
-      { indexed: true, internalType: "address", name: "owner", type: "address" },
-      { indexed: true, internalType: "address", name: "spender", type: "address" },
+      {
+        indexed: true,
+        internalType: "address",
+        name: "owner",
+        type: "address",
+      },
+      {
+        indexed: true,
+        internalType: "address",
+        name: "spender",
+        type: "address",
+      },
     ],
     name: "Approval",
     type: "event",
   },
   {
     anonymous: false,
-    inputs: [{ indexed: true, internalType: "address", name: "to", type: "address" }],
+    inputs: [
+      { indexed: true, internalType: "address", name: "to", type: "address" },
+    ],
     name: "Mint",
     type: "event",
   },
   {
     anonymous: false,
-    inputs: [{ indexed: true, internalType: "address", name: "from", type: "address" }],
+    inputs: [
+      { indexed: true, internalType: "address", name: "from", type: "address" },
+    ],
     name: "Burn",
     type: "event",
   },
   {
     anonymous: false,
-    inputs: [{ indexed: true, internalType: "address", name: "user", type: "address" }],
+    inputs: [
+      { indexed: true, internalType: "address", name: "user", type: "address" },
+    ],
     name: "WithdrawalRequested",
     type: "event",
   },
   {
     anonymous: false,
-    inputs: [{ indexed: true, internalType: "address", name: "user", type: "address" }],
+    inputs: [
+      { indexed: true, internalType: "address", name: "user", type: "address" },
+    ],
     name: "WithdrawalClaimed",
     type: "event",
   },

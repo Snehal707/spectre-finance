@@ -1,4 +1,4 @@
-import { SpectrePage } from './pages/SpectrePage';
+import { SpectrePage } from "./pages/SpectrePage";
 
 function App() {
   return <SpectrePage />;

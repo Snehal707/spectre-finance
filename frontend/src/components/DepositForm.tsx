@@ -1,8 +1,14 @@
-import { useState } from 'react';
-import { Lock, ArrowDown, Loader2, CheckCircle, ExternalLink } from 'lucide-react';
-import { PrivacyGuard } from './PrivacyGuard';
-import { DEFAULT_NETWORK } from '../utils/config';
-import type { TransactionStatus } from '../types';
+import { useState } from "react";
+import {
+  Lock,
+  ArrowDown,
+  Loader2,
+  CheckCircle,
+  ExternalLink,
+} from "lucide-react";
+import { PrivacyGuard } from "./PrivacyGuard";
+import { DEFAULT_NETWORK } from "../utils/config";
+import type { TransactionStatus } from "../types";
 
 interface DepositFormProps {
   walletBalance: string;
@@ -11,8 +17,13 @@ interface DepositFormProps {
   onReset: () => void;
 }
 
-export function DepositForm({ walletBalance, onDeposit, txStatus, onReset }: DepositFormProps) {
-  const [amount, setAmount] = useState('');
+export function DepositForm({
+  walletBalance,
+  onDeposit,
+  txStatus,
+  onReset,
+}: DepositFormProps) {
+  const [amount, setAmount] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,9 +31,9 @@ export function DepositForm({ walletBalance, onDeposit, txStatus, onReset }: Dep
 
     try {
       await onDeposit(amount);
-      setAmount('');
+      setAmount("");
     } catch (error) {
-      console.error('Deposit failed:', error);
+      console.error("Deposit failed:", error);
     }
   };
 
@@ -43,7 +54,9 @@ export function DepositForm({ walletBalance, onDeposit, txStatus, onReset }: Dep
         <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-500/20 flex items-center justify-center">
           <CheckCircle className="w-8 h-8 text-green-500" />
         </div>
-        <h3 className="text-xl font-semibold text-white mb-2">Deposit Successful!</h3>
+        <h3 className="text-xl font-semibold text-white mb-2">
+          Deposit Successful!
+        </h3>
         <p className="text-gray-400 mb-4">
           Your ETH has been encrypted and deposited into the Spectre Vault.
         </p>
@@ -110,22 +123,26 @@ export function DepositForm({ walletBalance, onDeposit, txStatus, onReset }: Dep
 
       {/* Arrow */}
       <div className="flex justify-center">
-        <div className="w-10 h-10 rounded-full bg-spectre-card border border-spectre-border 
-                      flex items-center justify-center">
+        <div
+          className="w-10 h-10 rounded-full bg-spectre-card border border-spectre-border 
+                      flex items-center justify-center"
+        >
           <ArrowDown className="w-5 h-5 text-fhenix-blue" />
         </div>
       </div>
 
       {/* To: Encrypted Vault */}
       <div className="space-y-2">
-        <label className="text-sm text-gray-400">To Spectre Vault (Encrypted)</label>
+        <label className="text-sm text-gray-400">
+          To Spectre Vault (Encrypted)
+        </label>
         <div className="px-4 py-4 bg-spectre-dark border border-spectre-border rounded-lg flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-fhenix-blue/20 flex items-center justify-center">
             <Lock className="w-5 h-5 text-fhenix-blue" />
           </div>
           <div>
             <div className="text-white font-mono text-lg">
-              {amount || '0.0'} eETH
+              {amount || "0.0"} eETH
             </div>
             <div className="text-xs text-fhenix-blue flex items-center gap-1">
               <span className="inline-block w-2 h-2 rounded-full bg-fhenix-blue animate-pulse" />
@@ -160,7 +177,7 @@ export function DepositForm({ walletBalance, onDeposit, txStatus, onReset }: Dep
             Encrypting & Depositing...
           </span>
         ) : (
-          'Deposit & Encrypt'
+          "Deposit & Encrypt"
         )}
       </button>
 

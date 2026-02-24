@@ -27,4 +27,4 @@ export interface PrivacyWarning {
   suggestedAmount: string | null;
 }
 
-export type TabType = 'deposit' | 'transfer' | 'withdraw';
+export type TabType = "deposit" | "transfer" | "withdraw";

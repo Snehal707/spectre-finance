@@ -87,9 +87,9 @@ export function HeaderBar({
 
         {isConnected && walletAddress ? (
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2 rounded-xl border border-spectre-border-soft bg-spectre-card-soft/90 px-4 py-2 text-sm font-semibold text-spectre-accent">
+            <div className="clip-cyber-btn flex items-center gap-2 border border-spectre-border-soft bg-spectre-card-soft/90 px-4 py-2 text-sm font-semibold text-spectre-accent">
               <Wallet size={16} />
-              <span className="font-mono">{formatAddress(walletAddress)}</span>
+              <span className="font-mono text-xs tracking-widest">{formatAddress(walletAddress)}</span>
             </div>
             <Button
               variant="ghost"
@@ -97,7 +97,7 @@ export function HeaderBar({
               onClick={onDisconnect}
               aria-label="Disconnect wallet"
               title="Disconnect wallet"
-              className="rounded-xl p-2.5 text-spectre-danger hover:bg-spectre-danger/10"
+              className="p-2.5 text-spectre-danger hover:bg-spectre-danger/10"
             >
               <LogOut size={16} />
             </Button>
@@ -109,6 +109,7 @@ export function HeaderBar({
             icon={<Wallet size={16} />}
             onClick={onConnect}
             disabled={isConnecting}
+            className="clip-cyber-btn"
           >
             {isConnecting ? "Connecting..." : "Connect"}
           </Button>

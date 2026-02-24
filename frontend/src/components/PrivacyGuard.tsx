@@ -81,7 +81,7 @@ export function PrivacyGuard({ amount, onSuggestedAmount }: PrivacyGuardProps) {
   if (!warning) return null;
 
   return (
-    <div className="spectre-glass-soft relative mt-4 rounded-xl border border-spectre-warn/30 p-4">
+    <div className="spectre-glass-soft clip-cyber relative mt-4 border border-spectre-warn/30 p-4">
       <Button
         variant="ghost"
         size="sm"
@@ -93,7 +93,7 @@ export function PrivacyGuard({ amount, onSuggestedAmount }: PrivacyGuardProps) {
       </Button>
 
       <div className="flex items-start gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-spectre-warn/20">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center bg-spectre-warn/20">
           <AlertTriangle className="h-5 w-5 text-spectre-warn" />
         </div>
 

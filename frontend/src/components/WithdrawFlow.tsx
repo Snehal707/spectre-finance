@@ -1,7 +1,14 @@
-import { useState } from 'react';
-import { Unlock, Clock, CheckCircle, Loader2, ExternalLink, AlertCircle } from 'lucide-react';
-import { DEFAULT_NETWORK } from '../utils/config';
-import type { TransactionStatus, VaultState } from '../types';
+import { useState } from "react";
+import {
+  Unlock,
+  Clock,
+  CheckCircle,
+  Loader2,
+  ExternalLink,
+  AlertCircle,
+} from "lucide-react";
+import { DEFAULT_NETWORK } from "../utils/config";
+import type { TransactionStatus, VaultState } from "../types";
 
 interface WithdrawFlowProps {
   vaultState: VaultState;
@@ -17,42 +24,46 @@ export function WithdrawFlow({
   txStatus,
   onReset,
 }: WithdrawFlowProps) {
-  const [step, setStep] = useState<'request' | 'waiting' | 'claim' | 'success'>(
-    vaultState.hasPendingWithdrawal 
-      ? (vaultState.isWithdrawalReady ? 'claim' : 'waiting')
-      : 'request'
+  const [step, setStep] = useState<"request" | "waiting" | "claim" | "success">(
+    vaultState.hasPendingWithdrawal
+      ? vaultState.isWithdrawalReady
+        ? "claim"
+        : "waiting"
+      : "request"
   );
 
   const handleRequestWithdraw = async () => {
     // Note: In a full implementation, this would use cofhejs to encrypt the amount
     // For demo purposes, we show the flow
     alert(
-      'Withdrawal requires encrypting the amount using cofhejs SDK.\n\n' +
-      'In production, you would:\n' +
-      '1. Use cofhejs to encrypt the withdrawal amount\n' +
-      '2. Send the encrypted amount to requestWithdraw()\n' +
-      '3. Wait for decryption to complete\n' +
-      '4. Call claimWithdraw() to receive your ETH'
+      "Withdrawal requires encrypting the amount using cofhejs SDK.\n\n" +
+        "In production, you would:\n" +
+        "1. Use cofhejs to encrypt the withdrawal amount\n" +
+        "2. Send the encrypted amount to requestWithdraw()\n" +
+        "3. Wait for decryption to complete\n" +
+        "4. Call claimWithdraw() to receive your ETH"
     );
   };
 
   const handleClaimWithdraw = async () => {
     try {
       await onClaimWithdraw();
-      setStep('success');
+      setStep("success");
     } catch (error) {
-      console.error('Claim failed:', error);
+      console.error("Claim failed:", error);
     }
   };
 
   // Success state
-  if (step === 'success' && txStatus.isSuccess && txStatus.txHash) {
+  if (step === "success" && txStatus.isSuccess && txStatus.txHash) {
     return (
       <div className="text-center py-8">
         <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-500/20 flex items-center justify-center">
           <CheckCircle className="w-8 h-8 text-green-500" />
         </div>
-        <h3 className="text-xl font-semibold text-white mb-2">Withdrawal Complete!</h3>
+        <h3 className="text-xl font-semibold text-white mb-2">
+          Withdrawal Complete!
+        </h3>
         <p className="text-gray-400 mb-4">
           Your encrypted balance has been decrypted and ETH sent to your wallet.
         </p>
@@ -67,7 +78,10 @@ export function WithdrawFlow({
             View Transaction <ExternalLink className="w-4 h-4" />
           </a>
           <button
-            onClick={() => { onReset(); setStep('request'); }}
+            onClick={() => {
+              onReset();
+              setStep("request");
+            }}
             className="px-4 py-2 bg-fhenix-blue text-black font-semibold rounded-lg 
                      hover:bg-fhenix-blue/80"
           >
@@ -82,23 +96,27 @@ export function WithdrawFlow({
     <div className="space-y-6">
       {/* Progress Steps */}
       <div className="flex items-center justify-between mb-8">
-        {['Request', 'Decrypt', 'Claim'].map((label, index) => {
+        {["Request", "Decrypt", "Claim"].map((label, index) => {
           const stepNumber = index + 1;
-          const isActive = 
-            (step === 'request' && stepNumber === 1) ||
-            (step === 'waiting' && stepNumber === 2) ||
-            (step === 'claim' && stepNumber === 3);
-          const isComplete = 
-            (step === 'waiting' && stepNumber === 1) ||
-            (step === 'claim' && stepNumber <= 2);
+          const isActive =
+            (step === "request" && stepNumber === 1) ||
+            (step === "waiting" && stepNumber === 2) ||
+            (step === "claim" && stepNumber === 3);
+          const isComplete =
+            (step === "waiting" && stepNumber === 1) ||
+            (step === "claim" && stepNumber <= 2);
 
           return (
             <div key={label} className="flex flex-col items-center flex-1">
-              <div 
+              <div
                 className={`w-10 h-10 rounded-full flex items-center justify-center mb-2
-                  ${isComplete ? 'bg-green-500/20 text-green-500' : 
-                    isActive ? 'bg-fhenix-blue/20 text-fhenix-blue animate-pulse' : 
-                    'bg-spectre-card text-gray-500'}`}
+                  ${
+                    isComplete
+                      ? "bg-green-500/20 text-green-500"
+                      : isActive
+                      ? "bg-fhenix-blue/20 text-fhenix-blue animate-pulse"
+                      : "bg-spectre-card text-gray-500"
+                  }`}
               >
                 {isComplete ? (
                   <CheckCircle className="w-5 h-5" />
@@ -106,7 +124,11 @@ export function WithdrawFlow({
                   <span className="font-semibold">{stepNumber}</span>
                 )}
               </div>
-              <span className={`text-sm ${isActive ? 'text-fhenix-blue' : 'text-gray-500'}`}>
+              <span
+                className={`text-sm ${
+                  isActive ? "text-fhenix-blue" : "text-gray-500"
+                }`}
+              >
                 {label}
               </span>
             </div>
@@ -115,21 +137,25 @@ export function WithdrawFlow({
       </div>
 
       {/* Step Content */}
-      {step === 'request' && (
+      {step === "request" && (
         <div className="space-y-4">
           <div className="p-4 bg-spectre-dark rounded-lg border border-spectre-border">
             <div className="flex items-center gap-3 mb-3">
               <Unlock className="w-5 h-5 text-fhenix-blue" />
-              <span className="font-semibold text-white">Request Withdrawal</span>
+              <span className="font-semibold text-white">
+                Request Withdrawal
+              </span>
             </div>
             <p className="text-sm text-gray-400 mb-4">
-              Enter the amount you want to withdraw. The amount will be encrypted
-              before sending to maintain privacy.
+              Enter the amount you want to withdraw. The amount will be
+              encrypted before sending to maintain privacy.
             </p>
 
             {!vaultState.hasBalance ? (
-              <div className="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg 
-                            flex items-center gap-2 text-yellow-500 text-sm">
+              <div
+                className="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg 
+                            flex items-center gap-2 text-yellow-500 text-sm"
+              >
                 <AlertCircle className="w-4 h-4" />
                 You don't have any encrypted balance to withdraw.
               </div>
@@ -146,7 +172,7 @@ export function WithdrawFlow({
                     Processing...
                   </span>
                 ) : (
-                  'Request Withdrawal'
+                  "Request Withdrawal"
                 )}
               </button>
             )}
@@ -154,12 +180,14 @@ export function WithdrawFlow({
         </div>
       )}
 
-      {step === 'waiting' && (
+      {step === "waiting" && (
         <div className="text-center py-8">
           <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-fhenix-blue/20 flex items-center justify-center">
             <Clock className="w-8 h-8 text-fhenix-blue animate-pulse" />
           </div>
-          <h3 className="text-xl font-semibold text-white mb-2">Decryption in Progress</h3>
+          <h3 className="text-xl font-semibold text-white mb-2">
+            Decryption in Progress
+          </h3>
           <p className="text-gray-400 mb-4">
             The CoFHE coprocessor is decrypting your withdrawal amount.
             <br />
@@ -172,7 +200,7 @@ export function WithdrawFlow({
         </div>
       )}
 
-      {step === 'claim' && (
+      {step === "claim" && (
         <div className="space-y-4">
           <div className="p-4 bg-green-500/10 rounded-lg border border-green-500/30">
             <div className="flex items-center gap-3 mb-3">
@@ -180,8 +208,8 @@ export function WithdrawFlow({
               <span className="font-semibold text-white">Ready to Claim!</span>
             </div>
             <p className="text-sm text-gray-400 mb-4">
-              Your withdrawal has been decrypted and is ready to claim.
-              Click below to receive your ETH.
+              Your withdrawal has been decrypted and is ready to claim. Click
+              below to receive your ETH.
             </p>
             <button
               onClick={handleClaimWithdraw}
@@ -195,7 +223,7 @@ export function WithdrawFlow({
                   Claiming...
                 </span>
               ) : (
-                'Claim ETH'
+                "Claim ETH"
               )}
             </button>
           </div>
@@ -211,7 +239,9 @@ export function WithdrawFlow({
 
       {/* Info */}
       <div className="p-3 bg-spectre-card rounded-lg border border-spectre-border">
-        <h4 className="text-sm font-semibold text-gray-300 mb-2">How Withdrawal Works</h4>
+        <h4 className="text-sm font-semibold text-gray-300 mb-2">
+          How Withdrawal Works
+        </h4>
         <ol className="text-xs text-gray-500 space-y-1 list-decimal list-inside">
           <li>Request withdrawal with encrypted amount</li>
           <li>CoFHE coprocessor decrypts the amount off-chain</li>

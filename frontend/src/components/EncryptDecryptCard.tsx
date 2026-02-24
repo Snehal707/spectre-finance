@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import {
   ArrowDownUp,
   Eye,
@@ -18,9 +18,67 @@ import { Stepper, type StepItem } from "./ui/Stepper";
 import { Tabs } from "./ui/Tabs";
 import { CONTRACT_ADDRESSES, DEFAULT_NETWORK } from "../utils/config";
 import { SPECTRE_TOKEN_ABI } from "../utils/fherc20-abi";
+import type { SuccessMessage } from "../pages/SpectrePage";
 
 type StepState = "pending" | "active" | "done";
 type TabMode = "encrypt" | "decrypt" | "transfer";
+
+type AlertTone = "success" | "warn" | "error" | "info";
+
+const ALERT_TOKENS: Record<AlertTone, {
+  border: string; accent: string;
+  text: string; lightText: string;
+  prefix: string; glow: string;
+}> = {
+  success: { border: "border-matrix-green/20", accent: "bg-matrix-green",  text: "text-matrix-green/90",  lightText: "text-emerald-700", prefix: "[STATUS_OK]", glow: "#00ff41" },
+  warn:    { border: "border-cyber-yellow/20", accent: "bg-cyber-yellow",  text: "text-cyber-yellow/90", lightText: "text-amber-700",   prefix: "[WARN_LOG]",  glow: "#fcee0a" },
+  error:   { border: "border-cyber-red/20",    accent: "bg-cyber-red",     text: "text-cyber-red/90",    lightText: "text-red-700",     prefix: "[ERR_LOG]",   glow: "#ff003c" },
+  info:    { border: "border-fhenix-blue/20",  accent: "bg-fhenix-blue",   text: "text-fhenix-blue/90",  lightText: "text-cyan-700",    prefix: "[INFO_LOG]",  glow: "#25d1f4" },
+};
+
+function AlertFrame({
+  tone,
+  icon,
+  isLight = false,
+  children,
+  className = "",
+}: {
+  tone: AlertTone;
+  icon?: string;
+  isLight?: boolean;
+  children: ReactNode;
+  className?: string;
+}) {
+  const t = ALERT_TOKENS[tone];
+  const bg = isLight ? "bg-white/80" : "bg-black/20";
+  const textClass = isLight ? t.lightText : t.text;
+  return (
+    <div className={`clip-cyber relative overflow-hidden border backdrop-blur-md ${t.border} ${bg} ${className}`}>
+      <div className={`absolute left-0 top-0 h-full w-1 ${t.accent} opacity-80`} />
+      <div className="px-4 py-2.5 pl-5">
+        <div className="mb-0.5 flex items-center gap-2">
+          {icon && (
+            <span className="text-[11px]" style={{ filter: `drop-shadow(0 0 4px ${t.glow})` }}>
+              {icon}
+            </span>
+          )}
+          <span className={`font-mono text-[9px] font-bold uppercase tracking-[0.25em] opacity-70 ${textClass}`}>
+            {t.prefix}
+          </span>
+        </div>
+        <div className={`font-mono text-[11px] leading-relaxed tracking-wide ${textClass}`}>
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const SUCCESS_MESSAGES: Record<TabMode, SuccessMessage> = {
+  encrypt:  { heading: "DATA_ENCRYPTED",  subtext: "HANDSHAKE_VERIFIED" },
+  transfer: { heading: "SIGNAL_SENT",     subtext: "ENCRYPTED_RELAY_COMPLETE" },
+  decrypt:  { heading: "FUNDS_DECRYPTED", subtext: "VAULT_EXTRACTION_SUCCESS" },
+};
 
 type EncryptDecryptCardProps = {
   theme: "light" | "dark";
@@ -30,6 +88,7 @@ type EncryptDecryptCardProps = {
   walletAddress: string | null;
   isCorrectNetwork?: boolean;
   onBalanceUpdate: () => void;
+  onSuccess?: (message: SuccessMessage) => void;
 };
 
 export function EncryptDecryptCard({
@@ -40,6 +99,7 @@ export function EncryptDecryptCard({
   walletAddress,
   isCorrectNetwork = true,
   onBalanceUpdate,
+  onSuccess,
 }: EncryptDecryptCardProps) {
   const [mode, setMode] = useState<TabMode>("encrypt");
   const [amount, setAmount] = useState("0");
@@ -70,6 +130,25 @@ export function EncryptDecryptCard({
   const currentBalance =
     mode === "encrypt" ? parseFloat(ethBalance) : parseFloat(eEthBalance);
   const displayBalance = isNaN(currentBalance) ? 0 : currentBalance;
+
+  const notifySuccess = (opMode: TabMode) => {
+    if (onSuccess) {
+      onSuccess(SUCCESS_MESSAGES[opMode]);
+    }
+  };
+
+  const saveTxRecord = (opMode: TabMode, txAmount: string, hash: string) => {
+    if (!walletAddress) return;
+    const key = `spectre_txs_${walletAddress.toLowerCase()}`;
+    const prev = JSON.parse(localStorage.getItem(key) ?? "[]") as Array<{
+      type: string;
+      amount: string;
+      hash: string;
+      ts: number;
+    }>;
+    const entry = { type: opMode, amount: txAmount, hash, ts: Date.now() };
+    localStorage.setItem(key, JSON.stringify([entry, ...prev].slice(0, 20)));
+  };
 
   // Reusable withdrawal status check (for polling and "Check again" button)
   const checkWithdrawalStatus = useCallback(async () => {
@@ -362,6 +441,8 @@ export function EncryptDecryptCard({
         (currentSeEth + parseFloat(amount)).toFixed(4)
       );
       onBalanceUpdate();
+      saveTxRecord("encrypt", amount, tx.hash);
+      notifySuccess("encrypt");
 
       setTimeout(() => {
         setCurrentStep(0);
@@ -429,6 +510,8 @@ export function EncryptDecryptCard({
         Math.max(0, currentSeEth - parseFloat(amount)).toFixed(4)
       );
       onBalanceUpdate();
+      saveTxRecord("transfer", amount, tx.hash);
+      notifySuccess("transfer");
 
       setError(
         `✅ Transferred ${amount} seETH to ${recipientAddress.slice(
@@ -492,6 +575,8 @@ export function EncryptDecryptCard({
         setHasPendingWithdrawal(false);
         setIsWithdrawalReady(false);
         onBalanceUpdate();
+        saveTxRecord("decrypt", amount, tx.hash);
+        notifySuccess("decrypt");
 
         setError("✅ ETH claimed successfully! Check your wallet.");
 
@@ -535,6 +620,8 @@ export function EncryptDecryptCard({
         localStorage.setItem(`spectre_eeth_${walletAddress}`, remainingBalance);
         setHasPendingWithdrawal(true);
         onBalanceUpdate();
+        saveTxRecord("decrypt", actualWithdraw, tx.hash);
+        notifySuccess("decrypt");
 
         setError(
           `✅ Burn request for ${actualWithdraw} seETH submitted! Wait for CoFHE then click "CLAIM ETH".`
@@ -638,17 +725,17 @@ export function EncryptDecryptCard({
   ];
 
   return (
-    <Card className="w-full max-w-[480px] px-8 py-8">
+    <Card theme={theme} className="w-full max-w-[480px] px-8 py-8">
       <div className="mb-6 flex items-center justify-between">
         <h2 className="font-cyber text-xl font-bold tracking-wide text-spectre-accent">
           {getModeTitle()}
         </h2>
-        <div className="rounded-lg p-2 text-spectre-accent">
+        <div className="p-2 text-spectre-accent">
           {getModeIcon()}
         </div>
       </div>
       {/* FHERC20 Badge */}
-      <div className="mb-4 flex items-center gap-2 rounded-xl border border-spectre-accent/30 bg-spectre-accent/10 px-3 py-2 text-xs font-medium text-spectre-accent">
+      <div className="mb-4 flex items-center gap-2 border border-spectre-accent/30 bg-spectre-accent/10 px-3 py-2 text-xs font-mono font-medium text-spectre-accent">
         <ArrowDownUp size={14} />
         <span>FHERC20 - Encrypted Transfers Enabled</span>
       </div>
@@ -672,6 +759,7 @@ export function EncryptDecryptCard({
             placeholder="0x..."
             disabled={!isConnected || isProcessing}
             mono
+            theme={theme}
             errorText={
               recipientAddress && !ethers.isAddress(recipientAddress)
                 ? "Invalid address format"
@@ -696,12 +784,13 @@ export function EncryptDecryptCard({
         onAmountChange={handleAmountChange}
         onMax={handleMax}
         disabled={!isConnected || isProcessing}
+        theme={theme}
       />
 
       {(mode === "decrypt" || mode === "transfer") &&
         hasEncryptedBalance &&
         parseFloat(eEthBalance) === 0 && (
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-spectre-accent/30 bg-spectre-accent/10 px-3 py-2.5 text-sm text-spectre-accent">
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border border-spectre-accent/30 bg-spectre-accent/10 px-3 py-2.5 text-sm text-spectre-accent">
             <span>
               We detected an encrypted balance. Use &quot;Sync balance&quot; to
               decrypt and check your seETH manually.
@@ -739,42 +828,41 @@ export function EncryptDecryptCard({
       </div>
 
       {balanceSyncStatus && (
-        <div
-          className={`mt-4 rounded-xl p-3 text-sm ${
-            balanceSyncStatus.startsWith("✅")
-              ? "bg-green-50 text-green-700"
-              : balanceSyncStatus.startsWith("⏳")
-              ? "bg-yellow-50 text-yellow-700"
-              : balanceSyncStatus.startsWith("🔐")
-              ? "bg-blue-50 text-blue-700"
-              : "bg-red-50 text-red-700"
-          }`}
+        <AlertFrame
+          tone={
+            balanceSyncStatus.startsWith("✅") ? "success"
+            : balanceSyncStatus.startsWith("⏳") ? "warn"
+            : balanceSyncStatus.startsWith("🔐") ? "info"
+            : "error"
+          }
+          icon={
+            balanceSyncStatus.startsWith("✅") ? "✅"
+            : balanceSyncStatus.startsWith("⏳") ? "⏳"
+            : balanceSyncStatus.startsWith("🔐") ? "🔐"
+            : "⚠️"
+          }
+          isLight={isLight}
+          className="mt-4"
         >
-          {balanceSyncStatus}
-        </div>
+          {balanceSyncStatus.replace(/^\S+\s*/, "")}
+        </AlertFrame>
       )}
 
       {/* Pending withdrawal info */}
       {mode === "decrypt" && isPendingWithdrawal && (
-        <div
-          className={`mt-4 rounded-xl p-3 text-sm ${
-            isWithdrawalReady
-              ? isLight
-                ? "bg-green-50 text-green-700 border border-green-200"
-                : "bg-green-900/20 text-green-300 border border-green-800"
-              : isLight
-              ? "bg-yellow-50 text-yellow-700 border border-yellow-200"
-              : "bg-yellow-900/20 text-yellow-300 border border-yellow-700"
-          }`}
+        <AlertFrame
+          tone={isWithdrawalReady ? "success" : "warn"}
+          icon={isWithdrawalReady ? "🔓" : "⏳"}
+          isLight={isLight}
+          className="mt-4"
         >
           {isWithdrawalReady ? (
-            '🔓 Decryption complete! Click "CLAIM ETH" to receive your funds.'
+            'Decryption complete! Click "CLAIM ETH" to receive your funds.'
           ) : (
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span>
-                ⏳ CoFHE is decrypting your withdrawal. This usually completes
-                in ~30 seconds. If it takes longer, click &quot;Check
-                again&quot; or refresh the page.
+                CoFHE is decrypting your withdrawal. This usually completes in ~30 seconds.
+                If it takes longer, click &quot;Check again&quot; or refresh the page.
               </span>
               <Button
                 size="sm"
@@ -786,57 +874,73 @@ export function EncryptDecryptCard({
               </Button>
             </div>
           )}
-        </div>
+        </AlertFrame>
       )}
 
-      {/* Privacy notice for transfer */}
+      {/* Privacy notice for transfer — Tactical Security Log */}
       {mode === "transfer" && !isProcessing && (
         <div
-          className={`mt-4 rounded-xl p-3 text-sm ${
-            isLight
-              ? "bg-purple-50 text-purple-700 border border-purple-100"
-              : "bg-purple-900/20 text-purple-300 border border-purple-800"
+          className={`clip-cyber relative mt-4 overflow-hidden border border-fhenix-purple/30 backdrop-blur-sm ${
+            isLight ? "bg-fhenix-purple/5" : "bg-fhenix-purple/5"
           }`}
         >
-          🔐 <strong>FHERC20 Transfer:</strong> Recipient balances stay
-          encrypted on-chain. Only they can view their balance!
+          {/* 4px left-edge hazard accent */}
+          <div className="absolute left-0 top-0 h-full w-1 bg-fhenix-purple opacity-70" />
+          <div className="px-4 py-3 pl-5">
+            {/* Header prefix row */}
+            <div className="mb-1 flex items-center gap-2">
+              <span
+                className="text-[11px]"
+                style={{ filter: "drop-shadow(0 0 5px #7b61ff)" }}
+              >
+                🔐
+              </span>
+              <span className="font-mono text-[9px] font-bold uppercase tracking-[0.25em] text-fhenix-purple/50">
+                [SECURE_INFO]
+              </span>
+            </div>
+            {/* Body */}
+            <p className="font-mono text-[11px] leading-relaxed text-fhenix-purple/90">
+              <strong className="font-bold text-fhenix-purple">FHERC20 Transfer:</strong>{" "}
+              Recipient balances stay encrypted on-chain. Only they can view their balance.
+            </p>
+          </div>
         </div>
       )}
 
       {/* Error/Success message */}
       {error && (
-        <div
-          className={`mt-4 rounded-xl p-3 text-sm ${
-            error.includes("✅")
-              ? "bg-green-50 text-green-700"
-              : error.includes("⏳")
-              ? "bg-yellow-50 text-yellow-700"
-              : "bg-red-50 text-red-700"
-          }`}
+        <AlertFrame
+          tone={
+            error.includes("✅") ? "success"
+            : error.includes("⏳") ? "warn"
+            : "error"
+          }
+          icon={
+            error.includes("✅") ? "✅"
+            : error.includes("⏳") ? "⏳"
+            : "⚠️"
+          }
+          isLight={isLight}
+          className="mt-4"
         >
-          {error}
-        </div>
+          {error.replace(/^\S+\s*/, "")}
+        </AlertFrame>
       )}
 
       {/* Transaction hash */}
       {txHash && (
-        <div
-          className={`mt-4 rounded-xl p-3 text-sm ${
-            isLight
-              ? "bg-blue-50 text-blue-700"
-              : "bg-blue-900/30 text-blue-300"
-          }`}
-        >
+        <AlertFrame tone="info" icon="🔗" isLight={isLight} className="mt-4">
           Tx:{" "}
           <a
             href={`${DEFAULT_NETWORK.blockExplorer}/tx/${txHash}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="underline"
+            className="underline hover:opacity-80"
           >
             {txHash.slice(0, 12)}...{txHash.slice(-6)}
           </a>
-        </div>
+        </AlertFrame>
       )}
 
       {/* Action button */}
@@ -861,34 +965,22 @@ export function EncryptDecryptCard({
 
       {/* Not connected message */}
       {!isConnected && (
-        <div
-          className={`mt-4 rounded-xl p-3 text-center text-sm ${
-            isLight
-              ? "bg-yellow-50 text-yellow-700"
-              : "bg-yellow-900/30 text-yellow-400"
-          }`}
-        >
-          Connect your wallet to start
-        </div>
+        <AlertFrame tone="warn" icon="🔌" isLight={isLight} className="mt-4">
+          Connect your wallet to start.
+        </AlertFrame>
       )}
 
       {/* Wrong network message */}
       {isConnected && !isCorrectNetwork && (
-        <div
-          className={`mt-4 rounded-xl p-3 text-center text-sm ${
-            isLight
-              ? "bg-amber-50 text-amber-800"
-              : "bg-amber-900/30 text-amber-200"
-          }`}
-        >
+        <AlertFrame tone="error" icon="⛔" isLight={isLight} className="mt-4">
           Switch to Sepolia to mint, transfer, or burn.
-        </div>
+        </AlertFrame>
       )}
 
       {/* Mint confirmation modal */}
       {showMintConfirm && mode === "encrypt" && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="spectre-glass w-full max-w-md rounded-2xl border border-spectre-border-soft p-6 shadow-xl">
+          <div className="spectre-glass clip-cyber w-full max-w-md border border-spectre-border-soft p-6 shadow-xl">
             <h3 className="mb-3 font-cyber text-lg font-bold text-spectre-text">
               Confirm Mint
             </h3>
