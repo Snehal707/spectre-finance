@@ -117,7 +117,6 @@ export function EncryptDecryptCard({
   // Withdrawal state for decrypt
   const [hasPendingWithdrawal, setHasPendingWithdrawal] = useState(false);
   const [isWithdrawalReady, setIsWithdrawalReady] = useState(false);
-  const [hasEncryptedBalance, setHasEncryptedBalance] = useState(false);
   const [isBalanceSyncing, setIsBalanceSyncing] = useState(false);
   const [balanceSyncStatus, setBalanceSyncStatus] = useState<string | null>(
     null
@@ -160,7 +159,6 @@ export function EncryptDecryptCard({
     ) {
       setHasPendingWithdrawal(false);
       setIsWithdrawalReady(false);
-      setHasEncryptedBalance(false);
       return;
     }
 
@@ -180,8 +178,7 @@ export function EncryptDecryptCard({
         setIsWithdrawalReady(ready);
       }
 
-      const hasBal = await contract.userHasBalance();
-      setHasEncryptedBalance(hasBal);
+      await contract.userHasBalance();
     } catch (err) {
       console.error("Error checking withdrawal status:", err);
     }
@@ -783,7 +780,7 @@ export function EncryptDecryptCard({
       />
 
       {(mode === "decrypt" || mode === "transfer") &&
-        hasEncryptedBalance &&
+        isConnected &&
         parseFloat(eEthBalance) === 0 && (
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border border-spectre-accent/30 bg-spectre-accent/10 px-3 py-2.5 text-sm text-spectre-accent">
             <span>
