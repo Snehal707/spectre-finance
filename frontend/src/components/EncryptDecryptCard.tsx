@@ -665,7 +665,7 @@ export function EncryptDecryptCard({
   const getButtonText = () => {
     if (isProcessing) {
       if (currentStep === 1) return "Preparing...";
-      if (currentStep === 2) return "Confirm in MetaMask...";
+      if (currentStep === 2) return "Confirm in wallet...";
       if (currentStep === 3) return "Waiting for confirmation...";
       return "Processing...";
     }
