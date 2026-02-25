@@ -313,11 +313,11 @@ input[type="range"]::-webkit-slider-runnable-track {
   box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.8), inset 0 0 0 1px rgba(37, 209, 244, 0.15);
 }
 
-/* Webkit thumb — 2px wide vertical glowing bar */
+/* Webkit thumb — grippable vertical glowing bar */
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 2px;
+  width: 12px;
   height: 24px;
   border-radius: 0;
   background: #25d1f4;
@@ -341,9 +341,9 @@ input[type="range"]::-moz-range-track {
   box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.8), inset 0 0 0 1px rgba(37, 209, 244, 0.15);
 }
 
-/* Moz thumb — 2px wide vertical glowing bar */
+/* Moz thumb — grippable vertical glowing bar */
 input[type="range"]::-moz-range-thumb {
-  width: 2px;
+  width: 12px;
   height: 24px;
   border-radius: 0;
   background: #25d1f4;

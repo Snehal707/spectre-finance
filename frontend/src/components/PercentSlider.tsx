@@ -21,6 +21,9 @@ export function PercentSlider({
         className={`w-full appearance-none ${
           disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
         }`}
+        style={{
+          background: `linear-gradient(to right, #25d1f4 ${value}%, rgba(0,0,0,0.6) ${value}%)`,
+        }}
       />
       <div className="flex justify-between font-mono text-[10px] uppercase tracking-widest text-spectre-muted">
         <span>0%</span>
