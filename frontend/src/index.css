@@ -302,6 +302,10 @@ input[type="range"] {
   background: transparent;
   cursor: pointer;
   width: 100%;
+  will-change: background;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 /* Webkit track — dark recessed gauge */
@@ -324,8 +328,13 @@ input[type="range"]::-webkit-slider-thumb {
   border: none;
   box-shadow: 0 0 8px #25d1f4, 0 0 16px rgba(37, 209, 244, 0.5);
   margin-top: -10px;
-  cursor: pointer;
+  cursor: grab;
   transition: box-shadow 0.15s ease;
+  will-change: transform;
+}
+
+input[type="range"]:active::-webkit-slider-thumb {
+  cursor: grabbing;
 }
 
 input[type="range"]::-webkit-slider-thumb:hover {
@@ -349,7 +358,12 @@ input[type="range"]::-moz-range-thumb {
   background: #25d1f4;
   border: none;
   box-shadow: 0 0 8px #25d1f4, 0 0 16px rgba(37, 209, 244, 0.5);
-  cursor: pointer;
+  cursor: grab;
+  will-change: transform;
+}
+
+input[type="range"]:active::-moz-range-thumb {
+  cursor: grabbing;
 }
 
 input[type="range"]:disabled {
