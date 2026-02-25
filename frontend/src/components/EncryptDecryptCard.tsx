@@ -780,8 +780,7 @@ export function EncryptDecryptCard({
       />
 
       {(mode === "decrypt" || mode === "transfer") &&
-        isConnected &&
-        parseFloat(eEthBalance) === 0 && (
+        isConnected && (
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border border-spectre-accent/30 bg-spectre-accent/10 px-3 py-2.5 text-sm text-spectre-accent">
             <span>
               We detected an encrypted balance. Use &quot;Sync balance&quot; to
