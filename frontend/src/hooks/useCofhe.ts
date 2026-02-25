@@ -1,6 +1,5 @@
 import { useState, useCallback, useRef } from "react";
-import { ethers } from "ethers";
-import type { Eip1193Provider } from "ethers";
+import { getEthersProvider, getEthersSigner } from "../utils/ethers";
 
 // CoFHE SDK types (cofhejs has no types; minimal shape for ref)
 interface CofheResult<T> {
@@ -54,12 +53,6 @@ export function useCofhe() {
       return true;
     }
 
-    // Check for wallet
-    if (!window.ethereum) {
-      setState((prev) => ({ ...prev, error: "No wallet found" }));
-      return false;
-    }
-
     setState((prev) => ({ ...prev, isInitializing: true, error: null }));
 
     initPromiseRef.current = (async () => {
@@ -68,10 +61,8 @@ export function useCofhe() {
         // @ts-expect-error - cofhejs has no type definitions
         const { cofhejs } = await import("cofhejs");
 
-        const provider = new ethers.BrowserProvider(
-          window.ethereum as Eip1193Provider
-        );
-        const signer = await provider.getSigner();
+        const provider = await getEthersProvider();
+        const signer = await getEthersSigner();
 
         console.log("🔐 Initializing CoFHE on Sepolia...");
 

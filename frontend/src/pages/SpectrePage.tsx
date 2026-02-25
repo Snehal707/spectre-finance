@@ -10,6 +10,7 @@ import { useTheme } from "../hooks/useTheme";
 import { useWallet } from "../hooks/useWallet";
 import { CONTRACT_ADDRESSES } from "../utils/config";
 import { SPECTRE_TOKEN_ABI } from "../utils/fherc20-abi";
+import { getEthersSigner } from "../utils/ethers";
 
 const BOOT_LINES = [
   "INIT_SPECTRE_OS...",
@@ -114,16 +115,14 @@ export function SpectrePage() {
     if (
       !wallet.isConnected ||
       !wallet.address ||
-      !CONTRACT_ADDRESSES.spectreToken ||
-      !window.ethereum
+      !CONTRACT_ADDRESSES.spectreToken
     ) {
       setEEthBalance("0");
       return;
     }
 
     try {
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
+      const signer = await getEthersSigner();
       const contract = new ethers.Contract(
         CONTRACT_ADDRESSES.spectreToken,
         SPECTRE_TOKEN_ABI,

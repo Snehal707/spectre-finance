@@ -18,6 +18,7 @@ import { Stepper, type StepItem } from "./ui/Stepper";
 import { Tabs } from "./ui/Tabs";
 import { CONTRACT_ADDRESSES, DEFAULT_NETWORK } from "../utils/config";
 import { SPECTRE_TOKEN_ABI } from "../utils/fherc20-abi";
+import { getEthersSigner } from "../utils/ethers";
 import type { SuccessMessage } from "../pages/SpectrePage";
 
 type StepState = "pending" | "active" | "done";
@@ -155,8 +156,7 @@ export function EncryptDecryptCard({
     if (
       !isConnected ||
       !walletAddress ||
-      !CONTRACT_ADDRESSES.spectreToken ||
-      !window.ethereum
+      !CONTRACT_ADDRESSES.spectreToken
     ) {
       setHasPendingWithdrawal(false);
       setIsWithdrawalReady(false);
@@ -165,8 +165,7 @@ export function EncryptDecryptCard({
     }
 
     try {
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
+      const signer = await getEthersSigner();
       const contract = new ethers.Contract(
         CONTRACT_ADDRESSES.spectreToken,
         SPECTRE_TOKEN_ABI,
@@ -345,15 +344,14 @@ export function EncryptDecryptCard({
   };
 
   const handleSyncBalance = async () => {
-    if (!isConnected || !walletAddress || !window.ethereum) return;
+    if (!isConnected || !walletAddress) return;
     if (isBalanceSyncing) return;
 
     setIsBalanceSyncing(true);
     setBalanceSyncStatus("🔐 Requesting balance decryption...");
 
     try {
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
+      const signer = await getEthersSigner();
       const contract = new ethers.Contract(
         CONTRACT_ADDRESSES.spectreToken,
         SPECTRE_TOKEN_ABI,
@@ -405,7 +403,7 @@ export function EncryptDecryptCard({
 
   // ENCRYPT: Mint seETH (ETH -> seETH) - called after user confirms in modal
   const handleEncrypt = async () => {
-    if (!isConnected || !window.ethereum || parseFloat(amount) <= 0) return;
+    if (!isConnected || parseFloat(amount) <= 0) return;
 
     setShowMintConfirm(false);
     setIsProcessing(true);
@@ -415,8 +413,7 @@ export function EncryptDecryptCard({
     setSuccess(false);
 
     try {
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
+      const signer = await getEthersSigner();
       const contract = new ethers.Contract(
         CONTRACT_ADDRESSES.spectreToken,
         SPECTRE_TOKEN_ABI,
@@ -467,7 +464,7 @@ export function EncryptDecryptCard({
 
   // TRANSFER: Private encrypted transfer to another address
   const handleTransfer = async () => {
-    if (!isConnected || !window.ethereum || parseFloat(amount) <= 0) return;
+    if (!isConnected || parseFloat(amount) <= 0) return;
     if (!ethers.isAddress(recipientAddress)) {
       setError("Invalid recipient address");
       return;
@@ -480,8 +477,7 @@ export function EncryptDecryptCard({
     setSuccess(false);
 
     try {
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
+      const signer = await getEthersSigner();
       const contract = new ethers.Contract(
         CONTRACT_ADDRESSES.spectreToken,
         SPECTRE_TOKEN_ABI,
@@ -544,7 +540,7 @@ export function EncryptDecryptCard({
 
   // DECRYPT: Burn seETH (seETH -> ETH)
   const handleDecrypt = async () => {
-    if (!isConnected || !window.ethereum) return;
+    if (!isConnected) return;
 
     setIsProcessing(true);
     setCurrentStep(1);
@@ -553,8 +549,7 @@ export function EncryptDecryptCard({
     setSuccess(false);
 
     try {
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
+      const signer = await getEthersSigner();
       const contract = new ethers.Contract(
         CONTRACT_ADDRESSES.spectreToken,
         SPECTRE_TOKEN_ABI,

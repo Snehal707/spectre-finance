@@ -4,6 +4,7 @@ import { useWallet } from "../hooks/useWallet";
 import { useTheme } from "../hooks/useTheme";
 import { DEFAULT_NETWORK, CONTRACT_ADDRESSES } from "../utils/config";
 import { SPECTRE_VAULT_ABI } from "../utils/abi";
+import { getEthersProvider, getEthersSigner } from "../utils/ethers";
 
 export function SpectreInterface() {
   const {
@@ -39,8 +40,7 @@ export function SpectreInterface() {
     if (
       !wallet.isConnected ||
       !wallet.address ||
-      !CONTRACT_ADDRESSES.spectreVault ||
-      !window.ethereum
+      !CONTRACT_ADDRESSES.spectreVault
     ) {
       setEEthBalance("0");
       return;
@@ -48,7 +48,7 @@ export function SpectreInterface() {
 
     setIsLoadingVault(true);
     try {
-      const provider = new ethers.BrowserProvider(window.ethereum);
+      const provider = await getEthersProvider();
       const contract = new ethers.Contract(
         CONTRACT_ADDRESSES.spectreVault,
         SPECTRE_VAULT_ABI,
@@ -113,7 +113,7 @@ export function SpectreInterface() {
   };
 
   const handleEncrypt = async () => {
-    if (!wallet.isConnected || !window.ethereum || parseFloat(amount) <= 0)
+    if (!wallet.isConnected || parseFloat(amount) <= 0)
       return;
     setIsProcessing(true);
     setStep(1);
@@ -121,8 +121,7 @@ export function SpectreInterface() {
     setTxHash(null);
 
     try {
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
+      const signer = await getEthersSigner();
       const contract = new ethers.Contract(
         CONTRACT_ADDRESSES.spectreVault,
         SPECTRE_VAULT_ABI,
@@ -168,15 +167,14 @@ export function SpectreInterface() {
   };
 
   const handleDecrypt = async () => {
-    if (!wallet.isConnected || !window.ethereum) return;
+    if (!wallet.isConnected) return;
     setIsProcessing(true);
     setStep(1);
     setError(null);
     setTxHash(null);
 
     try {
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
+      const signer = await getEthersSigner();
       const contract = new ethers.Contract(
         CONTRACT_ADDRESSES.spectreVault,
         SPECTRE_VAULT_ABI,

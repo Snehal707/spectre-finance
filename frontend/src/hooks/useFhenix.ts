@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import { ethers } from "ethers";
 import { SPECTRE_VAULT_ABI } from "../utils/abi";
 import { CONTRACT_ADDRESSES } from "../utils/config";
+import { getEthersProvider, getEthersSigner } from "../utils/ethers";
 import type { VaultState, TransactionStatus } from "../types";
 
 export function useFhenix(address: string | null) {
@@ -23,14 +24,8 @@ export function useFhenix(address: string | null) {
 
   // Get contract instance
   const getContract = useCallback(async (needsSigner = false) => {
-    if (typeof window.ethereum === "undefined") {
-      throw new Error("No wallet detected");
-    }
-
-    const provider = new ethers.BrowserProvider(window.ethereum);
-
     if (needsSigner) {
-      const signer = await provider.getSigner();
+      const signer = await getEthersSigner();
       return new ethers.Contract(
         CONTRACT_ADDRESSES.spectreVault,
         SPECTRE_VAULT_ABI,
@@ -38,6 +33,7 @@ export function useFhenix(address: string | null) {
       );
     }
 
+    const provider = await getEthersProvider();
     return new ethers.Contract(
       CONTRACT_ADDRESSES.spectreVault,
       SPECTRE_VAULT_ABI,
