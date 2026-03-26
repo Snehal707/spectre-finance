@@ -1,7 +1,10 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 
 import { LandingPage } from "./pages/LandingPage";
-import { SpectrePage } from "./pages/SpectrePage";
+
+const SpectrePage = lazy(() =>
+  import("./pages/SpectrePage").then((m) => ({ default: m.SpectrePage }))
+);
 
 type AppView = "landing" | "app";
 
@@ -28,7 +31,17 @@ function App() {
   };
 
   if (view === "app") {
-    return <SpectrePage />;
+    return (
+      <Suspense
+        fallback={
+          <div className="flex min-h-screen items-center justify-center bg-spectre-bg font-mono text-sm text-spectre-muted">
+            Loading Spectre Finance…
+          </div>
+        }
+      >
+        <SpectrePage />
+      </Suspense>
+    );
   }
 
   return <LandingPage onLaunchApp={handleLaunchApp} />;
