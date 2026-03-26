@@ -97,6 +97,8 @@ contract SpectreVault {
         
         // Convert input to internal encrypted type
         euint128 encAmount = FHE.asEuint128(amount);
+        FHE.allowSender(encAmount);
+        FHE.allowThis(encAmount);
         
         // Check if sender has sufficient balance (returns encrypted bool)
         ebool canTransfer = FHE.gte(balances[msg.sender], encAmount);
@@ -139,6 +141,8 @@ contract SpectreVault {
         require(!withdrawRequested[msg.sender], "Withdrawal already pending");
         
         euint128 encAmount = FHE.asEuint128(amount);
+        FHE.allowSender(encAmount);
+        FHE.allowThis(encAmount);
         
         // Check sufficient balance
         ebool canWithdraw = FHE.gte(balances[msg.sender], encAmount);
@@ -212,9 +216,10 @@ contract SpectreVault {
         (uint128 decryptedAmount, bool isDecrypted) = FHE.getDecryptResultSafe(encryptedAmount);
         require(isDecrypted, "Decryption not complete");
         
-        // Clear withdrawal request
+        // Clear withdrawal request (use a fresh encrypted zero handle, not the shared ENCRYPTED_ZERO)
         withdrawRequested[msg.sender] = false;
-        withdrawRequests[msg.sender] = ENCRYPTED_ZERO;
+        withdrawRequests[msg.sender] = FHE.asEuint128(0);
+        FHE.allowThis(withdrawRequests[msg.sender]);
         
         // Clear hasBalance if balance is zero
         // Note: We can't check encrypted balance directly, but after full withdrawal it's ENCRYPTED_ZERO
@@ -308,23 +313,8 @@ contract SpectreVault {
     
     // ============ Receive Function ============
     
-    /// @notice Allow direct ETH deposits
+    /// @notice Allow direct ETH deposits (TVL only; no FHE mint)
     receive() external payable {
-        // Convert to deposit
-        euint128 encryptedAmount = FHE.asEuint128(msg.value);
-        
-        if (hasBalance[msg.sender]) {
-            balances[msg.sender] = FHE.add(balances[msg.sender], encryptedAmount);
-        } else {
-            balances[msg.sender] = encryptedAmount;
-            hasBalance[msg.sender] = true;
-        }
-        
-        FHE.allowThis(balances[msg.sender]);
-        FHE.allowSender(balances[msg.sender]);
-        
         totalValueLocked += msg.value;
-        
-        emit Deposited(msg.sender, msg.value);
     }
 }

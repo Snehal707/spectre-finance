@@ -10,9 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@cofhe/sdk": "^0.4.0",
     "@rainbow-me/rainbowkit": "^2.2.10",
     "@tanstack/react-query": "^5.90.20",
-    "cofhejs": "^0.3.1",
     "ethers": "^6.16.0",
     "lucide-react": "^0.563.0",
     "react": "^19.2.0",

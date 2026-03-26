@@ -48,7 +48,7 @@ export const SPECTRE_TOKEN_ABI = [
   {
     inputs: [],
     name: "totalSupply",
-    outputs: [{ internalType: "euint128", name: "", type: "uint256" }],
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
     stateMutability: "view",
     type: "function",
   },

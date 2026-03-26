@@ -38,12 +38,17 @@ contract SpectreToken {
     // Encrypted allowances for DEX/transfers
     mapping(address => mapping(address => euint128)) private _allowances;
     
-    // Total supply (encrypted for full privacy)
-    euint128 private _totalSupply;
+    // Total supply (plaintext, in wei; updated on mint/burn)
+    uint256 public totalSupply;
     
     // Constants
     euint128 private ENCRYPTED_ZERO;
     
+    // Last per-address balance decrypt request (cooldown)
+    mapping(address => uint256) private _lastDecryptRequest;
+    
+    // Pending decrypt handle for balance viewing (stable across balance mutations)
+    mapping(address => euint128) private _pendingDecryptHandle;
     // ============ Withdrawal State ============
     struct WithdrawalRequest {
         euint128 amount;
@@ -66,9 +71,7 @@ contract SpectreToken {
     // ============ Constructor ============
     constructor() {
         ENCRYPTED_ZERO = FHE.asEuint128(0);
-        _totalSupply = ENCRYPTED_ZERO;
         FHE.allowThis(ENCRYPTED_ZERO);
-        FHE.allowThis(_totalSupply);
     }
     
     // ============ FHERC20 Core Functions ============
@@ -103,14 +106,6 @@ contract SpectreToken {
     }
     
     /**
-     * @notice Get encrypted total supply
-     * @return Encrypted total supply (euint128)
-     */
-    function totalSupply() external view returns (euint128) {
-        return _totalSupply;
-    }
-    
-    /**
      * @notice Transfer encrypted amount to another address
      * @dev Amount is NEVER revealed on-chain - true privacy!
      * @param to Recipient address
@@ -121,6 +116,8 @@ contract SpectreToken {
         require(_hasBalance[msg.sender], "No balance");
         
         euint128 amount = FHE.asEuint128(encryptedAmount);
+        FHE.allowSender(amount);
+        FHE.allowThis(amount);
         
         // Check sufficient balance (encrypted comparison)
         ebool sufficientBalance = FHE.gte(_balances[msg.sender], amount);
@@ -227,6 +224,8 @@ contract SpectreToken {
         require(_hasBalance[from], "No balance");
         
         euint128 amount = FHE.asEuint128(encryptedAmount);
+        FHE.allowSender(amount);
+        FHE.allowThis(amount);
         
         // Check allowance (encrypted)
         ebool hasAllowance = FHE.gte(_allowances[from][msg.sender], amount);
@@ -286,6 +285,8 @@ contract SpectreToken {
         require(spender != address(0), "Approve to zero address");
         
         euint128 amount = FHE.asEuint128(encryptedAmount);
+        FHE.allowSender(amount);
+        FHE.allowThis(amount);
         _allowances[msg.sender][spender] = amount;
         
         FHE.allowThis(_allowances[msg.sender][spender]);
@@ -339,12 +340,12 @@ contract SpectreToken {
             _hasBalance[msg.sender] = true;
         }
         
-        _totalSupply = FHE.add(_totalSupply, amount);
+        // Plaintext total supply tracking; increase by deposited ETH (in wei)
+        totalSupply += msg.value;
         totalValueLocked += msg.value;
         
         FHE.allowThis(_balances[msg.sender]);
         FHE.allowSender(_balances[msg.sender]);
-        FHE.allowThis(_totalSupply);
         
         // FHERC20 indicated balance: first interaction = 0.5001, else +0.0001
         if (!_hasInteracted[msg.sender]) {
@@ -369,6 +370,8 @@ contract SpectreToken {
         require(!_withdrawals[msg.sender].pending, "Withdrawal pending");
         
         euint128 amount = FHE.asEuint128(encryptedAmount);
+        FHE.allowSender(amount);
+        FHE.allowThis(amount);
         
         // Check sufficient balance; if insufficient, burn 0 (same as transfer)
         ebool sufficientBalance = FHE.gte(_balances[msg.sender], amount);
@@ -382,14 +385,12 @@ contract SpectreToken {
         
         // Deduct from balance
         _balances[msg.sender] = FHE.sub(_balances[msg.sender], actualAmount);
-        _totalSupply = FHE.sub(_totalSupply, actualAmount);
         
         // Permissions
         FHE.allowThis(_balances[msg.sender]);
         FHE.allowSender(_balances[msg.sender]);
         FHE.allowThis(_withdrawals[msg.sender].amount);
         FHE.allowSender(_withdrawals[msg.sender].amount);
-        FHE.allowThis(_totalSupply);
         
         // Trigger CoFHE decryption
         FHE.decrypt(actualAmount);
@@ -426,14 +427,12 @@ contract SpectreToken {
         
         // Deduct from balance
         _balances[msg.sender] = FHE.sub(_balances[msg.sender], actualAmount);
-        _totalSupply = FHE.sub(_totalSupply, actualAmount);
         
         // Permissions
         FHE.allowThis(_balances[msg.sender]);
         FHE.allowSender(_balances[msg.sender]);
         FHE.allowThis(_withdrawals[msg.sender].amount);
         FHE.allowSender(_withdrawals[msg.sender].amount);
-        FHE.allowThis(_totalSupply);
         
         // Trigger CoFHE decryption
         FHE.decrypt(actualAmount);
@@ -462,13 +461,11 @@ contract SpectreToken {
         });
         
         _balances[msg.sender] = ENCRYPTED_ZERO;
-        _totalSupply = FHE.sub(_totalSupply, amount);
         
         FHE.allowThis(_balances[msg.sender]);
         FHE.allowSender(_balances[msg.sender]);
         FHE.allowThis(_withdrawals[msg.sender].amount);
         FHE.allowSender(_withdrawals[msg.sender].amount);
-        FHE.allowThis(_totalSupply);
         
         FHE.decrypt(amount);
         
@@ -504,14 +501,15 @@ contract SpectreToken {
         (uint256 amount, bool decrypted) = FHE.getDecryptResultSafe(_withdrawals[msg.sender].amount);
         require(decrypted, "CoFHE decryption not ready");
         
-        // Clear withdrawal
+        // Clear withdrawal (use a fresh encrypted zero handle, not the shared ENCRYPTED_ZERO)
         _withdrawals[msg.sender].pending = false;
-        _withdrawals[msg.sender].amount = ENCRYPTED_ZERO;
+        _withdrawals[msg.sender].amount = FHE.asEuint128(0);
         FHE.allowThis(_withdrawals[msg.sender].amount);
         
-        // Transfer ETH
+        // Transfer ETH and update plaintext total supply / TVL based on actual decrypted amount
         if (amount > 0 && amount <= totalValueLocked) {
             totalValueLocked -= amount;
+            totalSupply -= amount;
             (bool success, ) = payable(msg.sender).call{value: amount}("");
             require(success, "ETH transfer failed");
         }
@@ -524,23 +522,25 @@ contract SpectreToken {
     /**
      * @notice Request decryption of your own balance
      * @dev Only the owner can view their decrypted balance
+     * @dev Only used internally for withdrawal flow, NOT for UI balance display
      */
     function requestBalanceDecryption() external {
         require(_hasBalance[msg.sender], "No balance");
-        // Ensure caller has permission to decrypt their own balance
         FHE.allowThis(_balances[msg.sender]);
         FHE.allowSender(_balances[msg.sender]);
+        _pendingDecryptHandle[msg.sender] = _balances[msg.sender];
         FHE.decrypt(_balances[msg.sender]);
     }
     
     /**
      * @notice Get decrypted balance (after decryption completes)
+     * @dev Only used internally for withdrawal flow, NOT for UI balance display
      */
     function getDecryptedBalance() external view returns (uint256 amount, bool isReady) {
-        if (!_hasBalance[msg.sender]) {
-            return (0, true);
-        }
-        return FHE.getDecryptResultSafe(_balances[msg.sender]);
+        if (!_hasBalance[msg.sender]) return (0, true);
+        euint128 handle = _pendingDecryptHandle[msg.sender];
+        if (euint128.unwrap(handle) == 0) return (0, false);
+        return FHE.getDecryptResultSafe(handle);
     }
     
     /**
@@ -559,7 +559,7 @@ contract SpectreToken {
     
     // ============ Receive ETH ============
     receive() external payable {
-        // Direct ETH goes to TVL but doesn't mint tokens
         totalValueLocked += msg.value;
+        // No FHE minting here - use mint() explicitly for seETH
     }
 }

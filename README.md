@@ -41,7 +41,7 @@ Unlike traditional mixers, Spectre uses **Fully Homomorphic Encryption (FHE)** v
 │  │   Mint UI   │  │ Transfer UI │  │   Burn UI   │  │ Privacy Guard │  │
 │  └─────────────┘  └─────────────┘  └─────────────┘  └───────────────┘  │
 │                              │                                          │
-│                      cofhejs SDK                                        │
+│                 @cofhe/sdk (Client SDK)                                 │
 └─────────────────────────────┬───────────────────────────────────────────┘
                               │
                               ▼
@@ -80,12 +80,12 @@ Unlike traditional mixers, Spectre uses **Fully Homomorphic Encryption (FHE)** v
 **Frontend:**
 - **Page:** `SpectrePage` (main app).
 - **Components:** `HeaderBar` (logo, connect, theme), `HeroBlock` (tagline, badges), `EncryptDecryptCard` (Mint / Transfer / Burn tabs, amount inputs, steps, Sync balance, claim).
-- **Hooks:** `useWallet` (RainbowKit/wagmi — connect, chainId, switch network), `useTheme`, `useCofhe` (optional: encrypt/unseal for fully private transfer).
+- **Hooks:** `useWallet` (RainbowKit/wagmi — connect, chainId, switch network), `useTheme`, `useCofhe` (optional: `@cofhe/sdk` wrapper for encrypt/decrypt/permits).
 - **Config:** `config.ts` (Sepolia, contract addresses), `fherc20-abi.ts` (SpectreToken ABI).
 
 **Data flows:**
 - **Mint:** ETH → `mint()` → contract stores encrypted in `_balances`, updates indicated balance → Transfer(0, user, 0.0001) for wallets.
-- **Transfer:** `transferPlain(to, amount)` (or encrypted `transfer(to, InEuint128)` with cofhejs) → encrypted and indicated balances updated.
+- **Transfer:** `transferPlain(to, amount)` (or encrypted `transfer(to, InEuint128)` with `@cofhe/sdk`) → encrypted and indicated balances updated.
 - **Sync balance:** `requestBalanceDecryption()` → CoFHE decrypts `_balances[user]` → frontend polls `getDecryptedBalance()` → result stored in localStorage and shown in UI.
 - **Burn:** `requestBurnPlain` / `requestBurnAll` → contract stores request and calls `FHE.decrypt()` → CoFHE decrypts off-chain → frontend polls `isWithdrawalReady()` → user calls `claimETH()` to receive ETH.
 
@@ -96,6 +96,30 @@ flowchart LR
   Contract --> CoFHE[CoFHE Coprocessor]
   CoFHE -.->|decrypt result| Contract
   Contract -.->|readiness/balance| Frontend
+```
+
+```mermaid
+sequenceDiagram
+  participant User
+  participant Frontend
+  participant SpectreToken
+  participant CoFHECoprocessor
+
+  User->>Frontend: Click Sync balance
+  Frontend->>SpectreToken: getDecryptedBalance()
+  alt Result already ready
+    SpectreToken-->>Frontend: amount, true
+    Frontend-->>User: Show synced balance
+  else Needs fresh decrypt
+    Frontend->>SpectreToken: requestBalanceDecryption()
+    SpectreToken->>CoFHECoprocessor: FHE.decrypt(handle)
+    Frontend->>Frontend: Wait initial delay then poll
+    loop Every 4 seconds
+      Frontend->>SpectreToken: getDecryptedBalance()
+      SpectreToken-->>Frontend: pending or ready
+    end
+    Frontend-->>User: Synced balance or retry hint
+  end
 ```
 
 ---
@@ -338,8 +362,9 @@ event WithdrawalClaimed(address indexed user);
 ## 📚 Resources
 
 - [Fhenix CoFHE Documentation](https://cofhe-docs.fhenix.zone)
+- [Client SDK migration guide (`cofhejs` -> `@cofhe/sdk`)](https://cofhe-docs.fhenix.zone/client-sdk/introduction/migrating-from-cofhejs)
 - [cofhe-hardhat-starter](https://github.com/fhenixprotocol/cofhe-hardhat-starter)
-- [cofhejs GitHub](https://github.com/FhenixProtocol/cofhejs)
+- [@cofhe/sdk GitHub](https://github.com/FhenixProtocol/cofhe-sdk)
 - [CoFHE Contracts GitHub](https://github.com/FhenixProtocol/cofhe-contracts)
 
 ---

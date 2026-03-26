@@ -1,28 +1,22 @@
 import { useState, useCallback, useRef } from "react";
+import {
+  createCofheClient,
+  createCofheConfig,
+} from "@cofhe/sdk/web";
+import {
+  Encryptable,
+  FheTypes,
+  isCofheError,
+} from "@cofhe/sdk";
+import { chains } from "@cofhe/sdk/chains";
+import { Ethers6Adapter } from "@cofhe/sdk/adapters";
 import { getEthersProvider, getEthersSigner } from "../utils/ethers";
 
-// CoFHE SDK types (cofhejs has no types; minimal shape for ref)
+// Keep the existing result shape so current callers remain unchanged.
 interface CofheResult<T> {
   success: boolean;
   data?: T;
   error?: string;
-}
-
-interface CofheSdkRef {
-  encrypt: (
-    values: unknown[],
-    onProgress: (state: string) => void
-  ) => Promise<{ success: boolean; data?: unknown[]; error?: string }>;
-  createPermit: (opts: {
-    type: string;
-    issuer: string;
-  }) => Promise<{ success: boolean; data?: unknown; error?: string }>;
-  unseal: (
-    value: unknown,
-    type: unknown,
-    issuer: string,
-    hash: unknown
-  ) => Promise<{ success: boolean; data?: bigint; error?: string }>;
 }
 
 interface EncryptionState {
@@ -38,8 +32,9 @@ export function useCofhe() {
     error: null,
   });
 
-  const cofheRef = useRef<CofheSdkRef | null>(null);
+  const clientRef = useRef<ReturnType<typeof createCofheClient> | null>(null);
   const initPromiseRef = useRef<Promise<boolean> | null>(null);
+  const lastPermitRef = useRef<{ issuer?: string } | null>(null);
 
   // Initialize CoFHE SDK
   const initialize = useCallback(async (): Promise<boolean> => {
@@ -49,7 +44,7 @@ export function useCofhe() {
     }
 
     // Already initialized
-    if (state.isInitialized && cofheRef.current) {
+    if (state.isInitialized && clientRef.current) {
       return true;
     }
 
@@ -57,42 +52,36 @@ export function useCofhe() {
 
     initPromiseRef.current = (async () => {
       try {
-        // Dynamic import for browser
-        // @ts-expect-error - cofhejs has no type definitions
-        const { cofhejs } = await import("cofhejs");
-
         const provider = await getEthersProvider();
         const signer = await getEthersSigner();
+        const { publicClient, walletClient } = await Ethers6Adapter(
+          provider,
+          signer
+        );
 
-        console.log("🔐 Initializing CoFHE on Sepolia...");
-
-        const initResult = await cofhejs.initializeWithEthers({
-          ethersProvider: provider,
-          ethersSigner: signer,
-          environment: "TESTNET",
+        const config = createCofheConfig({
+          supportedChains: [chains.sepolia],
         });
+        const client = createCofheClient(config);
 
-        if (!initResult.success) {
-          throw new Error(initResult.error || "CoFHE initialization failed");
-        }
+        await client.connect(publicClient, walletClient);
 
-        cofheRef.current = cofhejs as unknown as CofheSdkRef;
+        clientRef.current = client;
         setState({
           isInitialized: true,
           isInitializing: false,
           error: null,
         });
 
-        console.log("✅ CoFHE initialized successfully!");
         return true;
       } catch (err: unknown) {
-        if (err instanceof Error) console.error(err.message);
-        else console.error(err);
+        const message =
+          err instanceof Error ? err.message : "CoFHE initialization failed";
+        console.error("CoFHE initialization failed:", err);
         setState({
           isInitialized: false,
           isInitializing: false,
-          error:
-            err instanceof Error ? err.message : "CoFHE initialization failed",
+          error: message,
         });
         return false;
       } finally {
@@ -116,7 +105,7 @@ export function useCofhe() {
         | "uint256" = "uint128",
       onProgress?: (state: string) => void
     ): Promise<CofheResult<unknown>> => {
-      if (!cofheRef.current) {
+      if (!clientRef.current) {
         const initialized = await initialize();
         if (!initialized) {
           return { success: false, error: "CoFHE not initialized" };
@@ -124,73 +113,80 @@ export function useCofhe() {
       }
 
       try {
-        // @ts-expect-error - cofhejs has no type definitions
-        const { Encryptable, FheTypes } = await import("cofhejs");
-
-        // Map type string to FheTypes and Encryptable methods (cofhejs types untyped)
-        const typeMap: Record<
-          string,
-          { fheType: unknown; encryptFn: (v: bigint) => unknown }
-        > = {
-          uint8: { fheType: FheTypes.Uint8, encryptFn: Encryptable.uint8 },
-          uint16: { fheType: FheTypes.Uint16, encryptFn: Encryptable.uint16 },
-          uint32: { fheType: FheTypes.Uint32, encryptFn: Encryptable.uint32 },
-          uint64: { fheType: FheTypes.Uint64, encryptFn: Encryptable.uint64 },
-          uint128: {
-            fheType: FheTypes.Uint128,
-            encryptFn: Encryptable.uint128,
-          },
-          uint256: {
-            fheType: FheTypes.Uint256,
-            encryptFn: Encryptable.uint256,
-          },
-        };
-
-        const { encryptFn } = typeMap[type];
+        if (type === "uint256") {
+          return { success: false, error: `Unsupported type: ${type}` };
+        }
 
         // Progress callback
-        const logState = (encState: string) => {
-          console.log(`🔒 Encryption state: ${encState}`);
-          onProgress?.(encState);
+        const logState = (step: unknown) => {
+          onProgress?.(String(step));
         };
 
-        console.log(`🔐 Encrypting value ${value} as ${type}...`);
+        const client = clientRef.current;
+        if (!client) return { success: false, error: "CoFHE not initialized" };
 
-        const cofhe = cofheRef.current;
-        if (!cofhe) return { success: false, error: "CoFHE not initialized" };
-        const encryptResult = await cofhe.encrypt(
-          [encryptFn(value)],
-          logState
-        );
-
-        if (!encryptResult.success) {
-          return {
-            success: false,
-            error: encryptResult.error || "Encryption failed",
-          };
+        let encrypted;
+        if (type === "uint8") {
+          encrypted = await client
+            .encryptInputs([Encryptable.uint8(value)])
+            .onStep((step) => logState(step))
+            .execute();
+        } else if (type === "uint16") {
+          encrypted = await client
+            .encryptInputs([Encryptable.uint16(value)])
+            .onStep((step) => logState(step))
+            .execute();
+        } else if (type === "uint32") {
+          encrypted = await client
+            .encryptInputs([Encryptable.uint32(value)])
+            .onStep((step) => logState(step))
+            .execute();
+        } else if (type === "uint64") {
+          encrypted = await client
+            .encryptInputs([Encryptable.uint64(value)])
+            .onStep((step) => logState(step))
+            .execute();
+        } else {
+          encrypted = await client
+            .encryptInputs([Encryptable.uint128(value)])
+            .onStep((step) => logState(step))
+            .execute();
         }
-        if (!encryptResult.data || encryptResult.data.length === 0) {
+
+        if (!encrypted || encrypted[0] === undefined) {
           return { success: false, error: "Encryption failed" };
         }
 
-        console.log("✅ Encryption successful!");
-        return { success: true, data: encryptResult.data[0] };
+        return { success: true, data: encrypted[0] };
       } catch (err: unknown) {
-        if (err instanceof Error) console.error(err.message);
-        else console.error(err);
+        const message = isCofheError(err)
+          ? `${err.code}: ${err.message}`
+          : err instanceof Error
+          ? err.message
+          : "Encryption failed";
+        console.error("CoFHE encrypt failed:", err);
         return {
           success: false,
-          error: err instanceof Error ? err.message : "Encryption failed",
+          error: message,
         };
       }
     },
     [initialize]
   );
 
-  // Create a permit for unsealing
+  // Create (or reuse) a permit for unsealing
   const createPermit = useCallback(
     async (issuerAddress: string): Promise<CofheResult<unknown>> => {
-      if (!cofheRef.current) {
+      // Reuse existing permit for this issuer within the session
+      if (
+        lastPermitRef.current &&
+        lastPermitRef.current.issuer &&
+        lastPermitRef.current.issuer.toLowerCase() === issuerAddress.toLowerCase()
+      ) {
+        return { success: true, data: lastPermitRef.current };
+      }
+
+      if (!clientRef.current) {
         const initialized = await initialize();
         if (!initialized) {
           return { success: false, error: "CoFHE not initialized" };
@@ -198,31 +194,25 @@ export function useCofhe() {
       }
 
       try {
-        console.log("📜 Creating permit for address:", issuerAddress);
+        const client = clientRef.current;
+        if (!client) return { success: false, error: "CoFHE not initialized" };
 
-        const cofhe = cofheRef.current;
-        if (!cofhe) return { success: false, error: "CoFHE not initialized" };
-        const permitResult = await cofhe.createPermit({
-          type: "self",
+        // Prefer reuse; this prompts only when a permit does not exist.
+        const permit = await client.permits.getOrCreateSelfPermit();
+        lastPermitRef.current = {
           issuer: issuerAddress,
-        });
-
-        if (!permitResult.success) {
-          return {
-            success: false,
-            error: permitResult.error || "Permit creation failed",
-          };
-        }
-
-        console.log("✅ Permit created successfully!");
-        return { success: true, data: permitResult.data };
+        };
+        return { success: true, data: permit };
       } catch (err: unknown) {
-        if (err instanceof Error) console.error(err.message);
-        else console.error(err);
+        const message = isCofheError(err)
+          ? `${err.code}: ${err.message}`
+          : err instanceof Error
+          ? err.message
+          : "Permit creation failed";
+        console.error("CoFHE permit failed:", err);
         return {
           success: false,
-          error:
-            err instanceof Error ? err.message : "Permit creation failed",
+          error: message,
         };
       }
     },
@@ -242,7 +232,7 @@ export function useCofhe() {
         | "uint256" = "uint128",
       issuerAddress: string
     ): Promise<CofheResult<bigint>> => {
-      if (!cofheRef.current) {
+      if (!clientRef.current) {
         const initialized = await initialize();
         if (!initialized) {
           return { success: false, error: "CoFHE not initialized" };
@@ -250,11 +240,8 @@ export function useCofhe() {
       }
 
       try {
-        // @ts-expect-error - cofhejs has no type definitions
-        const { FheTypes } = await import("cofhejs");
-
-        // Map type string to FheTypes (cofhejs types untyped)
-        const typeMap: Record<string, unknown> = {
+        // Map type string to SDK FHE type.
+        const typeMap: Record<string, FheTypes> = {
           uint8: FheTypes.Uint8,
           uint16: FheTypes.Uint16,
           uint32: FheTypes.Uint32,
@@ -262,50 +249,33 @@ export function useCofhe() {
           uint128: FheTypes.Uint128,
           uint256: FheTypes.Uint256,
         };
+        const fheType = typeMap[type];
+        if (!fheType) {
+          return { success: false, error: `Unsupported type: ${type}` };
+        }
 
-        // First create a permit
+        // Ensure permit is available before decrypting.
         const permitResult = await createPermit(issuerAddress);
         if (!permitResult.success) {
           return { success: false, error: permitResult.error };
         }
 
-        const permit = permitResult.data as {
-          issuer: string;
-          getHash: () => unknown;
-        };
-
-        console.log("🔓 Unsealing encrypted value...");
-
-        const cofhe = cofheRef.current;
-        if (!cofhe) return { success: false, error: "CoFHE not initialized" };
-        const unsealResult = await cofhe.unseal(
-          encryptedValue,
-          typeMap[type],
-          permit.issuer,
-          permit.getHash()
-        );
-
-        if (!unsealResult.success) {
-          return {
-            success: false,
-            error: unsealResult.error || "Unsealing failed",
-          };
-        }
-        if (unsealResult.data === undefined) {
-          return { success: false, error: "Unsealing failed" };
-        }
-
-        console.log(
-          "✅ Unseal successful! Value:",
-          unsealResult.data.toString()
-        );
-        return { success: true, data: unsealResult.data };
+        const client = clientRef.current;
+        if (!client) return { success: false, error: "CoFHE not initialized" };
+        const value = await client
+          .decryptForView(encryptedValue as `0x${string}`, fheType)
+          .execute();
+        return { success: true, data: BigInt(value) };
       } catch (err: unknown) {
-        if (err instanceof Error) console.error(err.message);
-        else console.error(err);
+        const message = isCofheError(err)
+          ? `${err.code}: ${err.message}`
+          : err instanceof Error
+          ? err.message
+          : "Unsealing failed";
+        console.error("CoFHE unseal failed:", err);
         return {
           success: false,
-          error: err instanceof Error ? err.message : "Unsealing failed",
+          error: message,
         };
       }
     },
@@ -318,6 +288,6 @@ export function useCofhe() {
     encrypt,
     createPermit,
     unseal,
-    cofhe: cofheRef.current,
+    cofhe: clientRef.current,
   };
 }

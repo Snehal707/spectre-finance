@@ -54,7 +54,17 @@ export const SPECTRE_VAULT_ABI = [
   {
     inputs: [
       { internalType: "address", name: "to", type: "address" },
-      { internalType: "bytes", name: "amount", type: "bytes" },
+      {
+        components: [
+          { internalType: "uint256", name: "ctHash", type: "uint256" },
+          { internalType: "uint8", name: "securityZone", type: "uint8" },
+          { internalType: "uint8", name: "utype", type: "uint8" },
+          { internalType: "bytes", name: "signature", type: "bytes" },
+        ],
+        internalType: "struct InEuint128",
+        name: "amount",
+        type: "tuple",
+      },
     ],
     name: "transfer",
     outputs: [],

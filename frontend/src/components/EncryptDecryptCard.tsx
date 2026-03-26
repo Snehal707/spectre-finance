@@ -184,10 +184,10 @@ export function EncryptDecryptCard({
     }
   }, [isConnected, walletAddress]);
 
-  // Poll withdrawal status; faster (2s) when pending so "CLAIM" appears sooner
+  // Poll withdrawal status; moderate (4s) when pending to avoid RPC spam
   useEffect(() => {
     checkWithdrawalStatus();
-    const intervalMs = hasPendingWithdrawal ? 2000 : 5000;
+    const intervalMs = hasPendingWithdrawal ? 4000 : 5000;
     const interval = setInterval(checkWithdrawalStatus, intervalMs);
     return () => clearInterval(interval);
   }, [checkWithdrawalStatus, hasPendingWithdrawal]);
@@ -355,34 +355,59 @@ export function EncryptDecryptCard({
         signer
       );
 
+      // Check if a decrypt result is already ready before requesting a new one
+      const [existingAmount, alreadyReady] = await contract.getDecryptedBalance();
+      if (alreadyReady && existingAmount > 0n) {
+        const formatted = ethers.formatEther(existingAmount);
+        localStorage.setItem(
+          `spectre_eeth_${walletAddress.toLowerCase()}`,
+          formatted
+        );
+        onBalanceUpdate();
+        setBalanceSyncStatus(`✅ Balance synced: ${formatted} seETH`);
+        return;
+      }
+
+      // Send new decrypt request
       const tx = await contract.requestBalanceDecryption();
+      setBalanceSyncStatus(
+        "⏳ Transaction confirmed. Waiting for CoFHE pipeline..."
+      );
       await tx.wait();
 
-      let attempts = 0;
+      // Wait 15s before first poll — CoFHE needs time to pick up the event
+      await new Promise((resolve) => setTimeout(resolve, 15000));
+
+      // Poll up to 40 attempts x 4s = ~160s total window
+      const maxAttempts = 40;
+      const delayMs = 4000;
       let ready = false;
-      while (attempts < 6) {
+
+      for (let attempts = 0; attempts < maxAttempts; attempts++) {
         setBalanceSyncStatus(
-          `⏳ Waiting for CoFHE to decrypt... (attempt ${attempts + 1}/6)`
+          `⏳ Decrypting... (${attempts + 1}/${maxAttempts}) — this takes 20-30s`
         );
+
         const [amountRaw, isReady] = await contract.getDecryptedBalance();
 
         if (isReady) {
           const formatted = ethers.formatEther(amountRaw);
-          // Use lowercase address for consistent localStorage keys
-          const normalizedAddress = walletAddress?.toLowerCase() || "";
-          localStorage.setItem(`spectre_eeth_${normalizedAddress}`, formatted);
+          localStorage.setItem(
+            `spectre_eeth_${walletAddress.toLowerCase()}`,
+            formatted
+          );
           onBalanceUpdate();
           setBalanceSyncStatus(`✅ Balance synced: ${formatted} seETH`);
           ready = true;
           break;
         }
-        attempts += 1;
-        await new Promise((resolve) => setTimeout(resolve, 5000));
+
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
       }
 
       if (!ready) {
         setBalanceSyncStatus(
-          "⏳ Still decrypting. Try again in a few seconds."
+          "⏳ CoFHE is still processing. Wait ~30s then click Sync again — do NOT click multiple times as it queues extra work."
         );
       }
     } catch (err: unknown) {
@@ -390,9 +415,8 @@ export function EncryptDecryptCard({
         err instanceof Error
           ? (err as Error & { reason?: string }).reason ?? err.message
           : String(err);
-      if (err instanceof Error) console.error(err.message);
-      else console.error(err);
-      setBalanceSyncStatus(msg || "Balance sync failed");
+      console.error(err);
+      setBalanceSyncStatus(`❌ ${msg || "Balance sync failed"}`);
     } finally {
       setIsBalanceSyncing(false);
     }
@@ -485,8 +509,12 @@ export function EncryptDecryptCard({
 
       // Use plaintext transfer for simplicity (amount is visible in tx but balance stays encrypted)
       // For full privacy, use the encrypted transfer with cofhejs
-      const transferAmount = ethers.parseEther(amount);
-      const tx = await contract.transferPlain(recipientAddress, transferAmount);
+      const transferAmountWei = ethers.parseEther(amount);
+      const maxUint128 = BigInt("340282366920938463463374607431768211455"); // 2^128 - 1
+      if (transferAmountWei > maxUint128) {
+        throw new Error("Amount too large for uint128");
+      }
+      const tx = await contract.transferPlain(recipientAddress, transferAmountWei);
       setTxHash(tx.hash);
 
       setCurrentStep(3);
@@ -792,7 +820,11 @@ export function EncryptDecryptCard({
               disabled={isBalanceSyncing}
               className="shrink-0"
             >
-              {isBalanceSyncing ? "SYNCING..." : "SYNC BALANCE"}
+              {isBalanceSyncing
+                ? "DECRYPTING..."
+                : balanceSyncStatus?.startsWith("⏳ CoFHE is still processing")
+                ? "TRY AGAIN"
+                : "SYNC BALANCE"}
             </Button>
           </div>
         )}
