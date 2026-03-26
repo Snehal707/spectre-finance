@@ -13,6 +13,20 @@
 - **Website:** https://spectre-finance-ukzc.vercel.app
 - **Contract (Sepolia):** [`0x751111805C4c8a014da9f040199d040788d61347`](https://sepolia.etherscan.io/address/0x751111805C4c8a014da9f040199d040788d61347) (SpectreToken V7)
 
+**Demo video:**
+
+[![Spectre Finance demo video](https://img.youtube.com/vi/CH9VOFwEcxk/hqdefault.jpg)](https://youtu.be/CH9VOFwEcxk)
+
+---
+
+## Judges’ Quick Start
+
+1. Watch the demo video: https://youtu.be/CH9VOFwEcxk  
+2. Open the live dApp on Sepolia: https://spectre-finance-ukzc.vercel.app  
+3. Connect a Sepolia wallet with test ETH.  
+4. Mint seETH, perform an encrypted transfer, then burn and claim ETH back.  
+5. See **Security & Privacy** below for what is private vs. public in this prototype.
+
 ---
 
 ## Overview
