@@ -9,7 +9,7 @@ import { HeaderBar } from "../components/HeaderBar";
 import { HeroBlock } from "../components/HeroBlock";
 import { useTheme } from "../hooks/useTheme";
 import { useWallet } from "../hooks/useWallet";
-import { CONTRACT_ADDRESSES } from "../utils/config";
+import { CONTRACT_ADDRESSES, DEFAULT_NETWORK } from "../utils/config";
 import { SPECTRE_TOKEN_ABI } from "../utils/fherc20-abi";
 import { getEthersSigner } from "../utils/ethers";
 
@@ -480,7 +480,7 @@ export function SpectrePage() {
                         </td>
                         <td className="hidden px-4 py-3 md:table-cell">
                           <a
-                            href={`https://explorer.sepolia.fhenix.zone/tx/${tx.hash}`}
+                            href={`${DEFAULT_NETWORK.blockExplorer}/tx/${tx.hash}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="font-mono text-fhenix-blue hover:underline"
