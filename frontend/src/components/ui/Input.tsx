@@ -22,8 +22,8 @@ export function Input({
   const isLight = theme === "light";
 
   const base = isLight
-    ? "w-full border bg-white px-3 py-2.5 text-sm outline-none transition placeholder:text-slate-400 focus:border-spectre-accent focus:ring-1 focus:ring-spectre-accent"
-    : "w-full border bg-slate-950/40 px-3 py-2.5 text-sm outline-none transition placeholder:text-spectre-muted/70 focus:border-spectre-accent focus:ring-1 focus:ring-spectre-accent";
+    ? "clip-cyber w-full border bg-white/95 px-3 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-spectre-accent focus:ring-2 focus:ring-spectre-accent/30"
+    : "clip-cyber w-full border bg-slate-950/55 px-3 py-3 text-sm outline-none transition placeholder:text-spectre-muted/70 focus:border-spectre-accent focus:ring-2 focus:ring-spectre-accent/30";
 
   const stateClasses = errorText
     ? isLight
@@ -33,13 +33,15 @@ export function Input({
     ? "border-slate-300 text-slate-900"
     : "border-spectre-border-soft text-spectre-text";
 
-  const labelClass = isLight ? "text-slate-500" : "text-spectre-muted";
+  const labelClass = isLight ? "text-slate-600" : "text-spectre-muted";
   const fontClass = mono ? "font-mono" : "";
 
   return (
     <label className={`flex w-full flex-col gap-1.5 text-xs ${labelClass}`}>
       {label && (
-        <span className={`font-medium tracking-wide ${labelClass}`}>
+        <span
+          className={`font-mono text-[10px] font-semibold uppercase tracking-[0.28em] ${labelClass}`}
+        >
           {label}
         </span>
       )}
@@ -49,7 +51,7 @@ export function Input({
         {...props}
       />
       {helperText && !errorText && (
-        <span className={`text-[11px] ${isLight ? "text-slate-400" : "text-spectre-muted/80"}`}>{helperText}</span>
+        <span className={`text-[11px] ${isLight ? "text-slate-500" : "text-spectre-muted/80"}`}>{helperText}</span>
       )}
       {errorText && (
         <span className={`text-[11px] ${isLight ? "text-red-500" : "text-spectre-danger/90"}`}>{errorText}</span>

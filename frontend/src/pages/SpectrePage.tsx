@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { ethers } from "ethers";
+import { ArrowRightLeft } from "lucide-react";
 import type { MouseEvent } from "react";
 
 import { Button } from "../components/ui/Button";
@@ -68,13 +69,13 @@ function SuccessEffect({ heading, subtext, onComplete }: SuccessEffectProps) {
   }, [onComplete]);
 
   return (
-    <div className="fixed inset-0 z-[150] flex items-center justify-center pointer-events-none">
+    <div className="pointer-events-none fixed inset-0 z-[150] flex items-center justify-center">
       <div className="absolute inset-0 bg-white animate-white-out" />
       <div className="relative text-center">
         <h2 className="font-cyber text-5xl font-black text-spectre-accent animate-glitch">
           {heading}
         </h2>
-        <p className="font-mono text-[10px] text-spectre-muted tracking-[0.4em]">
+        <p className="font-mono text-[10px] tracking-[0.4em] text-spectre-muted">
           {subtext}
         </p>
       </div>
@@ -85,10 +86,45 @@ function SuccessEffect({ heading, subtext, onComplete }: SuccessEffectProps) {
 type TxRecord = { type: string; amount: string; hash: string; ts: number };
 
 const TX_LABELS: Record<string, { label: string; token: string }> = {
-  encrypt:  { label: "MINT",     token: "ETH → seETH" },
+  encrypt: { label: "MINT", token: "ETH → seETH" },
   transfer: { label: "TRANSFER", token: "seETH" },
-  decrypt:  { label: "BURN",     token: "seETH → ETH" },
+  decrypt: { label: "BURN", token: "seETH → ETH" },
 };
+
+type ActivityStatProps = {
+  label: string;
+  value: string;
+  theme: "light" | "dark";
+};
+
+function ActivityStat({ label, value, theme }: ActivityStatProps) {
+  const isLight = theme === "light";
+
+  return (
+    <div
+      className={`clip-cyber border px-4 py-3 ${
+        isLight
+          ? "border-slate-200 bg-white/75"
+          : "border-spectre-border-soft/70 bg-slate-950/40"
+      }`}
+    >
+      <p
+        className={`font-mono text-[10px] font-semibold uppercase tracking-[0.28em] ${
+          isLight ? "text-slate-400" : "text-spectre-muted"
+        }`}
+      >
+        {label}
+      </p>
+      <p
+        className={`mt-2 font-cyber text-lg font-bold tracking-[0.08em] ${
+          isLight ? "text-slate-900" : "text-spectre-text"
+        }`}
+      >
+        {value}
+      </p>
+    </div>
+  );
+}
 
 export function SpectrePage() {
   const { theme, toggleTheme } = useTheme();
@@ -110,7 +146,6 @@ export function SpectrePage() {
   const [parallax, setParallax] = useState({ x: 0, y: 0 });
   const [txHistory, setTxHistory] = useState<TxRecord[]>([]);
 
-  // Fetch seETH balance from FHERC20 contract
   const fetchVaultStatus = useCallback(async () => {
     if (
       !wallet.isConnected ||
@@ -129,14 +164,10 @@ export function SpectrePage() {
         signer
       );
 
-      // Check if user has balance in the FHERC20 token (use userHasBalance for msg.sender)
       const hasBalance = await contract.userHasBalance();
-
-      // Normalize wallet address to lowercase for consistent localStorage keys
       const normalizedAddress = wallet.address.toLowerCase();
 
       if (hasBalance) {
-        // We track it locally since balance is encrypted
         const stored = localStorage.getItem(
           `spectre_eeth_${normalizedAddress}`
         );
@@ -146,38 +177,37 @@ export function SpectrePage() {
       }
     } catch (err) {
       console.error("Error fetching seETH balance:", err);
-      // On error, try to use localStorage value
       const normalizedAddress = wallet.address.toLowerCase();
       const stored = localStorage.getItem(`spectre_eeth_${normalizedAddress}`);
       setEEthBalance(stored || "0");
     }
   }, [wallet.isConnected, wallet.address]);
 
-  // Boot overlay - run once per session
-  /* eslint-disable react-hooks/set-state-in-effect -- intentional: read sessionStorage on mount to skip boot */
   useEffect(() => {
     if (sessionStorage.getItem("spectre_booted") === "true") {
       setIsBooting(false);
     }
   }, []);
-  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleBootComplete = () => {
     sessionStorage.setItem("spectre_booted", "true");
     setIsBooting(false);
   };
 
-  // Reload tx history from localStorage whenever wallet or a new success fires
   const loadTxHistory = useCallback(() => {
-    if (!wallet.address) { setTxHistory([]); return; }
+    if (!wallet.address) {
+      setTxHistory([]);
+      return;
+    }
+
     const key = `spectre_txs_${wallet.address.toLowerCase()}`;
     const stored = localStorage.getItem(key);
     setTxHistory(stored ? (JSON.parse(stored) as TxRecord[]) : []);
   }, [wallet.address]);
 
-  /* eslint-disable react-hooks/set-state-in-effect -- derived from localStorage on wallet/success change */
-  useEffect(() => { loadTxHistory(); }, [loadTxHistory, successMessage]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    loadTxHistory();
+  }, [loadTxHistory, successMessage]);
 
   const handleMouseMove = (event: MouseEvent<HTMLDivElement>) => {
     const { innerWidth, innerHeight } = window;
@@ -187,19 +217,21 @@ export function SpectrePage() {
     });
   };
 
-  // Initial fetch and polling
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: initial fetch + 10s polling
     fetchVaultStatus();
     const interval = setInterval(fetchVaultStatus, 10000);
     return () => clearInterval(interval);
   }, [fetchVaultStatus]);
 
-  // Combined refresh function
   const handleRefresh = useCallback(() => {
     fetchVaultStatus();
     fetchBalance();
   }, [fetchVaultStatus, fetchBalance]);
+
+  const latestTx = txHistory[0];
+  const latestTxLabel = latestTx
+    ? TX_LABELS[latestTx.type]?.label ?? "EVENT"
+    : "IDLE";
 
   if (isBooting) {
     return <SystemBoot onComplete={handleBootComplete} />;
@@ -207,11 +239,33 @@ export function SpectrePage() {
 
   return (
     <div
-      className={`min-h-screen ${
-        isLight ? "bg-slate-100" : "bg-spectre-bg bg-cyber-grid"
+      className={`relative min-h-screen overflow-hidden ${
+        isLight ? "bg-[#f5f7fb] text-slate-900" : "bg-spectre-bg text-spectre-text"
       }`}
       onMouseMove={handleMouseMove}
     >
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+        <div
+          className={`absolute inset-0 ${
+            isLight
+              ? "bg-[radial-gradient(circle_at_top_left,rgba(56,189,248,0.18),transparent_32%),radial-gradient(circle_at_82%_12%,rgba(14,165,233,0.14),transparent_26%),linear-gradient(180deg,rgba(255,255,255,0.8),rgba(241,245,249,0.9))]"
+              : "bg-[radial-gradient(circle_at_top_left,rgba(37,209,244,0.18),transparent_30%),radial-gradient(circle_at_82%_14%,rgba(123,97,255,0.18),transparent_24%),linear-gradient(180deg,rgba(255,255,255,0.02),transparent_28%)]"
+          }`}
+        />
+        <div
+          className={`absolute inset-0 bg-cyber-grid ${
+            isLight ? "opacity-[0.12]" : "opacity-100"
+          }`}
+        />
+        <div
+          className={`absolute inset-0 spectre-noise ${
+            isLight ? "opacity-[0.04]" : "opacity-[0.05]"
+          }`}
+        />
+        <div className="animate-float-slow absolute -left-24 top-24 h-72 w-72 rounded-full bg-fhenix-blue/10 blur-3xl" />
+        <div className="animate-float-slow absolute right-0 top-64 h-80 w-80 rounded-full bg-fhenix-purple/10 blur-3xl [animation-delay:1.8s]" />
+      </div>
+
       {successMessage && (
         <SuccessEffect
           heading={successMessage.heading}
@@ -219,10 +273,14 @@ export function SpectrePage() {
           onComplete={() => setSuccessMessage(null)}
         />
       )}
-      {/* Top navbar – Stitch: logo, theme toggle, wallet connect, network badge */}
-      <header className={`sticky top-0 z-10 border-b backdrop-blur-xl overflow-hidden ${isLight ? "border-slate-200 bg-white/80" : "border-spectre-border-soft/60 bg-spectre-card/50"}`}>
-        {/* Hazard strip — spec: border-hazard bottom edge */}
-        <div className="absolute bottom-0 left-0 h-[2px] w-full border-hazard opacity-25" />
+
+      <header
+        className={`sticky top-0 z-20 overflow-hidden backdrop-blur-xl ${
+          isLight
+            ? "bg-white/82 shadow-[0_10px_30px_rgba(148,163,184,0.14)]"
+            : "bg-slate-950/60 shadow-[0_14px_34px_rgba(2,6,23,0.34)]"
+        }`}
+      >
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-6 py-4 lg:px-10">
           <HeaderBar
             theme={theme}
@@ -236,26 +294,26 @@ export function SpectrePage() {
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-7xl flex-col gap-10 px-6 pb-16 pt-8 lg:px-10">
+      <main className="relative z-10 mx-auto flex w-full max-w-7xl flex-col gap-10 px-6 pb-16 pt-8 lg:px-10">
         {wallet.isConnected && !isCorrectNetwork && (
           <div
-            className={`mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 ${
+            className={`clip-cyber relative flex flex-wrap items-center justify-between gap-3 overflow-hidden border px-4 py-4 ${
               isLight
-                ? "border-amber-200 bg-amber-50 text-amber-800"
-                : "border-amber-700 bg-amber-900/30 text-amber-200"
+                ? "border-amber-200 bg-amber-50/90 text-amber-800"
+                : "border-amber-700/60 bg-amber-900/20 text-amber-200"
             }`}
           >
+            <div className="absolute inset-y-0 left-0 w-1 bg-cyber-yellow" />
             <p className="text-sm font-medium">
               You&apos;re on <strong>{currentNetworkName}</strong>. Spectre
               Finance is only on Sepolia.
             </p>
-            <Button onClick={switchNetwork} size="md">
+            <Button theme={theme} onClick={switchNetwork} size="md">
               Switch to Sepolia
             </Button>
           </div>
         )}
 
-        {/* Stitch: 2-column grid – hero left, primary action card right with subtle parallax */}
         <section className="grid w-full grid-cols-1 items-start gap-10 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
           <div
             className="relative transition-transform duration-75"
@@ -265,7 +323,7 @@ export function SpectrePage() {
           >
             <HeroBlock theme={theme} />
           </div>
-          <div className="flex w-full justify-center lg:justify-end">
+          <div className="flex w-full justify-center lg:sticky lg:top-28 lg:justify-end">
             <EncryptDecryptCard
               theme={theme}
               ethBalance={wallet.balance}
@@ -279,53 +337,148 @@ export function SpectrePage() {
           </div>
         </section>
 
-        {/* Recent activity – reads from localStorage, no new network calls */}
-        <section className="mt-12 flex flex-col gap-4">
-          <h2 className={`font-cyber text-sm font-semibold uppercase tracking-wider ${isLight ? "text-slate-500" : "text-spectre-muted"}`}>
-            Recent activity
-          </h2>
-          <div className={`overflow-hidden border ${isLight ? "border-slate-200 bg-white/60" : "spectre-glass-soft border-spectre-border-soft/60"}`}>
+        <section className="mt-4 flex flex-col gap-5">
+          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div className="space-y-2">
+              <h2
+                className={`font-cyber text-2xl font-bold tracking-[0.08em] ${
+                  isLight ? "text-slate-900" : "text-spectre-text"
+                }`}
+              >
+                Recent activity
+              </h2>
+              <p className={`max-w-2xl text-sm ${isLight ? "text-slate-500" : "text-spectre-muted"}`}>
+                Local history for the current wallet session. Mint, transfer,
+                and burn events appear here after each transaction completes.
+              </p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <ActivityStat
+                label="Entries"
+                value={txHistory.length.toString().padStart(2, "0")}
+                theme={theme}
+              />
+              <ActivityStat
+                label="Latest Event"
+                value={latestTxLabel}
+                theme={theme}
+              />
+              <ActivityStat
+                label="Wallet State"
+                value={wallet.isConnected ? "Live" : "Offline"}
+                theme={theme}
+              />
+            </div>
+          </div>
+
+          <div
+            className={`clip-cyber relative overflow-hidden border ${
+              isLight
+                ? "border-slate-200 bg-white/70"
+                : "border-spectre-border-soft/60 spectre-glass-soft"
+            }`}
+          >
+            <div className="spectre-frame-line absolute inset-x-0 top-0 h-px" />
             {txHistory.length === 0 ? (
-              <div className={`min-h-[120px] px-4 py-6 text-center text-sm ${isLight ? "text-slate-400" : "text-spectre-muted"}`}>
-                {wallet.isConnected
-                  ? "No recent transactions. Encrypt, transfer, or withdraw to see activity here."
-                  : "Connect your wallet to see activity."}
+              <div
+                className={`flex min-h-[180px] flex-col items-center justify-center gap-4 px-6 py-8 text-center ${
+                  isLight ? "text-slate-400" : "text-spectre-muted"
+                }`}
+              >
+                <div
+                  className={`flex h-14 w-14 items-center justify-center border ${
+                    isLight
+                      ? "border-slate-200 bg-slate-50 text-slate-400"
+                      : "border-spectre-border-soft/70 bg-slate-950/60 text-spectre-muted"
+                  }`}
+                >
+                  <ArrowRightLeft size={22} />
+                </div>
+                <div className="space-y-1">
+                  <p className={`font-cyber text-lg ${isLight ? "text-slate-700" : "text-spectre-text"}`}>
+                    No activity yet
+                  </p>
+                  <p className="max-w-md text-sm">
+                    {wallet.isConnected
+                      ? "Encrypt, transfer, or withdraw to populate this ledger."
+                      : "Connect your wallet to see session history."}
+                  </p>
+                </div>
               </div>
             ) : (
               <table className="w-full text-xs">
                 <thead>
-                  <tr className={`border-b font-mono uppercase tracking-widest ${isLight ? "border-slate-200 text-slate-400" : "border-spectre-border-soft/40 text-spectre-muted"}`}>
+                  <tr
+                    className={`border-b font-mono uppercase tracking-widest ${
+                      isLight
+                        ? "border-slate-200 text-slate-400"
+                        : "border-spectre-border-soft/40 text-spectre-muted"
+                    }`}
+                  >
                     <th className="px-4 py-2 text-left">Type</th>
                     <th className="px-4 py-2 text-left">Amount</th>
-                    <th className="px-4 py-2 text-left hidden sm:table-cell">Token</th>
-                    <th className="px-4 py-2 text-left hidden md:table-cell">Tx Hash</th>
+                    <th className="hidden px-4 py-2 text-left sm:table-cell">
+                      Token
+                    </th>
+                    <th className="hidden px-4 py-2 text-left md:table-cell">
+                      Tx Hash
+                    </th>
                     <th className="px-4 py-2 text-right">Time</th>
                   </tr>
                 </thead>
                 <tbody>
                   {txHistory.map((tx, i) => {
-                    const meta = TX_LABELS[tx.type] ?? { label: tx.type.toUpperCase(), token: "" };
+                    const meta = TX_LABELS[tx.type] ?? {
+                      label: tx.type.toUpperCase(),
+                      token: "",
+                    };
                     const date = new Date(tx.ts);
-                    const timeStr = date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-                    const dateStr = date.toLocaleDateString([], { month: "short", day: "numeric" });
+                    const timeStr = date.toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    });
+                    const dateStr = date.toLocaleDateString([], {
+                      month: "short",
+                      day: "numeric",
+                    });
+
                     return (
-                      <tr key={i} className={`border-b last:border-0 ${isLight ? "border-slate-100 hover:bg-slate-50" : "border-spectre-border-soft/20 hover:bg-white/5"}`}>
+                      <tr
+                        key={i}
+                        className={`border-b last:border-0 ${
+                          isLight
+                            ? "border-slate-100 hover:bg-slate-50"
+                            : "border-spectre-border-soft/20 hover:bg-white/5"
+                        }`}
+                      >
                         <td className="px-4 py-3">
-                          <span className={`font-mono font-bold text-[10px] px-1.5 py-0.5 ${
-                            tx.type === "encrypt"  ? "bg-fhenix-blue/10 text-fhenix-blue" :
-                            tx.type === "transfer" ? "bg-fhenix-purple/10 text-fhenix-purple" :
-                                                     "bg-matrix-green/10 text-matrix-green"
-                          }`}>
+                          <span
+                            className={`px-1.5 py-0.5 font-mono text-[10px] font-bold ${
+                              tx.type === "encrypt"
+                                ? "bg-fhenix-blue/10 text-fhenix-blue"
+                                : tx.type === "transfer"
+                                ? "bg-fhenix-purple/10 text-fhenix-purple"
+                                : "bg-matrix-green/10 text-matrix-green"
+                            }`}
+                          >
                             {meta.label}
                           </span>
                         </td>
-                        <td className={`px-4 py-3 font-mono ${isLight ? "text-slate-800" : "text-spectre-text"}`}>
+                        <td
+                          className={`px-4 py-3 font-mono ${
+                            isLight ? "text-slate-800" : "text-spectre-text"
+                          }`}
+                        >
                           {tx.amount}
                         </td>
-                        <td className={`px-4 py-3 hidden sm:table-cell ${isLight ? "text-slate-500" : "text-spectre-muted"}`}>
+                        <td
+                          className={`hidden px-4 py-3 sm:table-cell ${
+                            isLight ? "text-slate-500" : "text-spectre-muted"
+                          }`}
+                        >
                           {meta.token}
                         </td>
-                        <td className="px-4 py-3 hidden md:table-cell">
+                        <td className="hidden px-4 py-3 md:table-cell">
                           <a
                             href={`https://explorer.sepolia.fhenix.zone/tx/${tx.hash}`}
                             target="_blank"
@@ -335,9 +488,15 @@ export function SpectrePage() {
                             {tx.hash.slice(0, 8)}...{tx.hash.slice(-6)}
                           </a>
                         </td>
-                        <td className={`px-4 py-3 text-right font-mono ${isLight ? "text-slate-400" : "text-spectre-muted"}`}>
+                        <td
+                          className={`px-4 py-3 text-right font-mono ${
+                            isLight ? "text-slate-400" : "text-spectre-muted"
+                          }`}
+                        >
                           <span className="block">{timeStr}</span>
-                          <span className="block text-[10px] opacity-60">{dateStr}</span>
+                          <span className="block text-[10px] opacity-60">
+                            {dateStr}
+                          </span>
                         </td>
                       </tr>
                     );

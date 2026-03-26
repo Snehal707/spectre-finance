@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import {
-  ArrowDownUp,
   Eye,
   EyeOff,
   Loader2,
@@ -16,6 +15,7 @@ import { Card } from "./ui/Card";
 import { Input } from "./ui/Input";
 import { Stepper, type StepItem } from "./ui/Stepper";
 import { Tabs } from "./ui/Tabs";
+import { useCofhe, type EncryptedInputPayload } from "../hooks/useCofhe";
 import { CONTRACT_ADDRESSES, DEFAULT_NETWORK } from "../utils/config";
 import { SPECTRE_TOKEN_ABI } from "../utils/fherc20-abi";
 import { getEthersSigner } from "../utils/ethers";
@@ -31,10 +31,10 @@ const ALERT_TOKENS: Record<AlertTone, {
   text: string; lightText: string;
   prefix: string; glow: string;
 }> = {
-  success: { border: "border-matrix-green/20", accent: "bg-matrix-green",  text: "text-matrix-green/90",  lightText: "text-emerald-700", prefix: "[STATUS_OK]", glow: "#00ff41" },
-  warn:    { border: "border-cyber-yellow/20", accent: "bg-cyber-yellow",  text: "text-cyber-yellow/90", lightText: "text-amber-700",   prefix: "[WARN_LOG]",  glow: "#fcee0a" },
-  error:   { border: "border-cyber-red/20",    accent: "bg-cyber-red",     text: "text-cyber-red/90",    lightText: "text-red-700",     prefix: "[ERR_LOG]",   glow: "#ff003c" },
-  info:    { border: "border-fhenix-blue/20",  accent: "bg-fhenix-blue",   text: "text-fhenix-blue/90",  lightText: "text-cyan-700",    prefix: "[INFO_LOG]",  glow: "#25d1f4" },
+  success: { border: "border-matrix-green/20", accent: "bg-matrix-green",  text: "text-matrix-green/90",  lightText: "text-emerald-800", prefix: "[STATUS_OK]", glow: "#00ff41" },
+  warn:    { border: "border-cyber-yellow/20", accent: "bg-cyber-yellow",  text: "text-cyber-yellow/90", lightText: "text-amber-800",   prefix: "[WARN_LOG]",  glow: "#fcee0a" },
+  error:   { border: "border-cyber-red/20",    accent: "bg-cyber-red",     text: "text-cyber-red/90",    lightText: "text-red-800",     prefix: "[ERR_LOG]",   glow: "#ff003c" },
+  info:    { border: "border-fhenix-blue/20",  accent: "bg-fhenix-blue",   text: "text-fhenix-blue/90",  lightText: "text-sky-800",     prefix: "[INFO_LOG]",  glow: "#25d1f4" },
 };
 
 function AlertFrame({
@@ -51,7 +51,15 @@ function AlertFrame({
   className?: string;
 }) {
   const t = ALERT_TOKENS[tone];
-  const bg = isLight ? "bg-white/80" : "bg-black/20";
+  const bg = isLight
+    ? tone === "success"
+      ? "bg-emerald-50/90"
+      : tone === "warn"
+      ? "bg-amber-50/90"
+      : tone === "error"
+      ? "bg-red-50/90"
+      : "bg-sky-50/90"
+    : "bg-black/20";
   const textClass = isLight ? t.lightText : t.text;
   return (
     <div className={`clip-cyber relative overflow-hidden border backdrop-blur-md ${t.border} ${bg} ${className}`}>
@@ -63,7 +71,7 @@ function AlertFrame({
               {icon}
             </span>
           )}
-          <span className={`font-mono text-[9px] font-bold uppercase tracking-[0.25em] opacity-70 ${textClass}`}>
+          <span className={`font-mono text-[9px] font-bold uppercase tracking-[0.25em] opacity-85 ${textClass}`}>
             {t.prefix}
           </span>
         </div>
@@ -102,6 +110,7 @@ export function EncryptDecryptCard({
   onBalanceUpdate,
   onSuccess,
 }: EncryptDecryptCardProps) {
+  const { encrypt } = useCofhe();
   const [mode, setMode] = useState<TabMode>("encrypt");
   const [amount, setAmount] = useState("0");
   const [sliderVal, setSliderVal] = useState(0);
@@ -507,14 +516,21 @@ export function EncryptDecryptCard({
 
       setCurrentStep(2);
 
-      // Use plaintext transfer for simplicity (amount is visible in tx but balance stays encrypted)
-      // For full privacy, use the encrypted transfer with cofhejs
       const transferAmountWei = ethers.parseEther(amount);
       const maxUint128 = BigInt("340282366920938463463374607431768211455"); // 2^128 - 1
       if (transferAmountWei > maxUint128) {
         throw new Error("Amount too large for uint128");
       }
-      const tx = await contract.transferPlain(recipientAddress, transferAmountWei);
+
+      const encryptedAmountResult = await encrypt(transferAmountWei, "uint128");
+      if (!encryptedAmountResult.success || !encryptedAmountResult.data) {
+        throw new Error(
+          encryptedAmountResult.error ?? "Failed to encrypt transfer amount"
+        );
+      }
+
+      const encryptedAmount: EncryptedInputPayload = encryptedAmountResult.data;
+      const tx = await contract.transfer(recipientAddress, encryptedAmount);
       setTxHash(tx.hash);
 
       setCurrentStep(3);
@@ -744,34 +760,77 @@ export function EncryptDecryptCard({
     { value: "decrypt", label: "Burn" },
   ];
 
+  const cardDescription =
+    mode === "encrypt"
+      ? "Deposit ETH to mint encrypted seETH."
+      : mode === "transfer"
+      ? "Encrypt the amount and send seETH with FHERC20."
+      : "Request a burn, then claim ETH after CoFHE completes.";
+
+  const syncButtonLabel = isBalanceSyncing
+    ? "DECRYPTING..."
+    : balanceSyncStatus?.startsWith("⏳ CoFHE is still processing")
+    ? "TRY AGAIN"
+    : "SYNC BALANCE";
+
+  const stepsLabel =
+    mode === "encrypt"
+      ? "Minting steps"
+      : mode === "transfer"
+      ? "Transfer steps"
+      : "Burning steps";
+
   return (
-    <Card theme={theme} className="w-full max-w-[480px] px-8 py-8">
-      <div className="mb-6 flex items-center justify-between">
-        <h2 className="font-cyber text-xl font-bold tracking-wide text-spectre-accent">
-          {getModeTitle()}
-        </h2>
-        <div className="p-2 text-spectre-accent">
-          {getModeIcon()}
+    <Card theme={theme} className="w-full max-w-[500px] px-6 py-6 sm:px-8 sm:py-8">
+      <div className="mb-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2
+              className={`font-cyber text-[1.7rem] font-bold tracking-[0.06em] ${
+                isLight ? "text-slate-900" : "text-spectre-text"
+              }`}
+            >
+              {getModeTitle()}
+            </h2>
+            <p
+              className={`mt-2 max-w-sm text-sm leading-6 ${
+                isLight ? "text-slate-600" : "text-spectre-muted"
+              }`}
+            >
+              {cardDescription}
+            </p>
+            <p
+              className={`mt-3 font-mono text-[11px] uppercase tracking-[0.22em] ${
+                isLight ? "text-slate-600" : "text-spectre-muted"
+              }`}
+            >
+              Balance: {displayBalance.toFixed(4)}{" "}
+              {mode === "encrypt" ? "ETH" : "seETH"}
+            </p>
+          </div>
+          <div
+            className={`clip-cyber flex h-14 w-14 items-center justify-center border ${
+              isLight
+                ? "border-slate-200 bg-white text-sky-600"
+                : "border-spectre-border-soft bg-slate-950/70 text-spectre-accent"
+            }`}
+          >
+            {getModeIcon()}
+          </div>
         </div>
       </div>
-      {/* FHERC20 Badge */}
-      <div className="mb-4 flex items-center gap-2 border border-spectre-accent/30 bg-spectre-accent/10 px-3 py-2 text-xs font-mono font-medium text-spectre-accent">
-        <ArrowDownUp size={14} />
-        <span>FHERC20 - Encrypted Transfers Enabled</span>
-      </div>
 
-      {/* Mode toggle - 3 tabs */}
       <div className="mb-6 flex justify-center">
         <Tabs
+          theme={theme}
           items={tabItems}
           value={mode}
           onChange={(value) => !isProcessing && setMode(value as TabMode)}
         />
       </div>
 
-      {/* Transfer recipient input */}
       {mode === "transfer" && (
-        <div className="mb-4">
+        <div className="mb-5">
           <Input
             label="Recipient Address"
             value={recipientAddress}
@@ -789,7 +848,6 @@ export function EncryptDecryptCard({
         </div>
       )}
 
-      {/* Amount panel */}
       <AmountPanel
         label={
           mode === "encrypt"
@@ -809,45 +867,53 @@ export function EncryptDecryptCard({
 
       {(mode === "decrypt" || mode === "transfer") &&
         isConnected && (
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border border-spectre-accent/30 bg-spectre-accent/10 px-3 py-2.5 text-sm text-spectre-accent">
-            <span>
+          <div
+            className={`clip-cyber relative mt-4 flex flex-wrap items-center justify-between gap-3 overflow-hidden border px-4 py-3 ${
+              isLight
+                ? "border-sky-200 bg-sky-50/80 text-sky-700"
+                : "border-spectre-accent/25 bg-spectre-accent/10 text-spectre-accent"
+            }`}
+          >
+            <span className="max-w-sm text-sm leading-6">
               We detected an encrypted balance. Use &quot;Sync balance&quot; to
               decrypt and check your seETH manually.
             </span>
             <Button
+              theme={theme}
               size="sm"
               onClick={handleSyncBalance}
               disabled={isBalanceSyncing}
               className="shrink-0"
             >
-              {isBalanceSyncing
-                ? "DECRYPTING..."
-                : balanceSyncStatus?.startsWith("⏳ CoFHE is still processing")
-                ? "TRY AGAIN"
-                : "SYNC BALANCE"}
+              {syncButtonLabel}
             </Button>
           </div>
         )}
 
-      {/* Slider */}
       <div className="mt-6">
         <PercentSlider
+          theme={theme}
           value={sliderVal}
           onChange={handleSliderChange}
           disabled={!isConnected || isProcessing}
         />
       </div>
 
-      {/* Steps */}
-      <div className="mt-8">
-        <p className="mb-3 font-cyber text-xs tracking-wider text-spectre-muted">
-          {mode === "encrypt"
-            ? "Minting steps"
-            : mode === "transfer"
-            ? "Transfer steps (Private!)"
-            : "Burning steps"}
+      <div
+        className={`clip-cyber mt-8 border px-4 py-4 ${
+          isLight
+            ? "border-slate-200 bg-slate-50/80"
+            : "border-spectre-border-soft/70 bg-slate-950/35"
+        }`}
+      >
+        <p
+          className={`mb-3 font-mono text-[10px] font-semibold uppercase tracking-[0.28em] ${
+            isLight ? "text-slate-600" : "text-spectre-muted"
+          }`}
+        >
+          {stepsLabel}
         </p>
-        <Stepper steps={getSteps() as StepItem[]} />
+        <Stepper theme={theme} steps={getSteps() as StepItem[]} />
       </div>
 
       {balanceSyncStatus && (
@@ -871,7 +937,6 @@ export function EncryptDecryptCard({
         </AlertFrame>
       )}
 
-      {/* Pending withdrawal info */}
       {mode === "decrypt" && isPendingWithdrawal && (
         <AlertFrame
           tone={isWithdrawalReady ? "success" : "warn"}
@@ -888,6 +953,7 @@ export function EncryptDecryptCard({
                 If it takes longer, click &quot;Check again&quot; or refresh the page.
               </span>
               <Button
+                theme={theme}
                 size="sm"
                 icon={<RefreshCw size={14} />}
                 onClick={checkWithdrawalStatus}
@@ -904,7 +970,9 @@ export function EncryptDecryptCard({
       {mode === "transfer" && !isProcessing && (
         <div
           className={`clip-cyber relative mt-4 overflow-hidden border border-fhenix-purple/30 backdrop-blur-sm ${
-            isLight ? "bg-fhenix-purple/5" : "bg-fhenix-purple/5"
+            isLight
+              ? "bg-[linear-gradient(180deg,rgba(124,58,237,0.08),rgba(124,58,237,0.04))]"
+              : "bg-fhenix-purple/5"
           }`}
         >
           {/* 4px left-edge hazard accent */}
@@ -918,13 +986,17 @@ export function EncryptDecryptCard({
               >
                 🔐
               </span>
-              <span className="font-mono text-[9px] font-bold uppercase tracking-[0.25em] text-fhenix-purple/50">
+              <span className={`font-mono text-[9px] font-bold uppercase tracking-[0.25em] ${
+                isLight ? "text-violet-600" : "text-fhenix-purple/50"
+              }`}>
                 [SECURE_INFO]
               </span>
             </div>
             {/* Body */}
-            <p className="font-mono text-[11px] leading-relaxed text-fhenix-purple/90">
-              <strong className="font-bold text-fhenix-purple">FHERC20 Transfer:</strong>{" "}
+            <p className={`font-mono text-[11px] leading-relaxed ${
+              isLight ? "text-violet-700" : "text-fhenix-purple/90"
+            }`}>
+              <strong className={`font-bold ${isLight ? "text-violet-800" : "text-fhenix-purple"}`}>FHERC20 Transfer:</strong>{" "}
               Recipient balances stay encrypted on-chain. Only they can view their balance.
             </p>
           </div>
@@ -968,6 +1040,7 @@ export function EncryptDecryptCard({
 
       {/* Action button */}
       <Button
+        theme={theme}
         fullWidth
         className={`mt-6 py-4 text-base ${
           success
@@ -1003,14 +1076,24 @@ export function EncryptDecryptCard({
       {/* Mint confirmation modal */}
       {showMintConfirm && mode === "encrypt" && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="spectre-glass clip-cyber w-full max-w-md border border-spectre-border-soft p-6 shadow-xl">
-            <h3 className="mb-3 font-cyber text-lg font-bold text-spectre-text">
+          <div
+            className={`clip-cyber w-full max-w-md border p-6 shadow-xl ${
+              isLight
+                ? "border-slate-200 bg-white text-slate-900"
+                : "spectre-glass border-spectre-border-soft text-spectre-text"
+            }`}
+          >
+            <h3
+              className={`mb-3 font-cyber text-lg font-bold ${
+                isLight ? "text-slate-900" : "text-spectre-text"
+              }`}
+            >
               Confirm Mint
             </h3>
-            <p className="mb-4 text-sm text-spectre-muted">
+            <p className={`mb-4 text-sm ${isLight ? "text-slate-500" : "text-spectre-muted"}`}>
               You are sending <strong>{amount} ETH</strong> to mint seETH.
             </p>
-            <p className="mb-4 text-xs text-spectre-muted">
+            <p className={`mb-4 text-xs ${isLight ? "text-slate-500" : "text-spectre-muted"}`}>
               Contract:{" "}
               <a
                 href={`${DEFAULT_NETWORK.blockExplorer}/address/${CONTRACT_ADDRESSES.spectreToken}`}
@@ -1024,6 +1107,7 @@ export function EncryptDecryptCard({
             </p>
             <div className="flex gap-3">
               <Button
+                theme={theme}
                 variant="secondary"
                 className="flex-1 py-3"
                 onClick={() => setShowMintConfirm(false)}
@@ -1031,6 +1115,7 @@ export function EncryptDecryptCard({
                 Cancel
               </Button>
               <Button
+                theme={theme}
                 variant="primary"
                 className="flex-1 py-3"
                 onClick={() => handleEncrypt()}

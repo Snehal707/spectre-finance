@@ -28,54 +28,29 @@ export function HeaderBar({
   };
 
   return (
-    <header className="flex items-center justify-between">
-      <div className="flex items-center gap-3">
-        <div
-          className={`flex h-12 w-12 items-center justify-center rounded-full ${
-            isLight
-              ? "bg-blue-50"
-              : "bg-spectre-card-soft border border-spectre-border-soft"
-          }`}
-        >
-          <svg width="28" height="28" viewBox="0 0 40 40" fill="none">
-            <circle
-              cx="20"
-              cy="20"
-              r="20"
-              fill={isLight ? "#E0F2FE" : "#1E293B"}
-            />
-            <path
-              d="M20 10C14.4772 10 10 14.4772 10 20C10 25.5228 14.4772 30 20 30"
-              stroke="#00D4FF"
-              strokeWidth="4"
-              strokeLinecap="round"
-            />
-            <circle cx="20" cy="20" r="3.5" fill="#00D4FF" />
-            <path
-              d="M29 15L27 15"
-              stroke="#00D4FF"
-              strokeWidth="3"
-              strokeLinecap="round"
-            />
-            <path
-              d="M31 20L26 20"
-              stroke="#00D4FF"
-              strokeWidth="3"
-              strokeLinecap="round"
-            />
-          </svg>
+    <header className="flex w-full items-center justify-between gap-4">
+      <div className="flex min-h-11 items-center">
+        <div className="flex items-baseline gap-2">
+          <span
+            className={`font-cyber text-[1.4rem] font-bold leading-none sm:text-[1.55rem] ${
+              isLight ? "text-sky-600" : "text-spectre-accent"
+            }`}
+          >
+            Spectre
+          </span>
+          <span
+            className={`font-cyber text-[1.4rem] font-bold leading-none sm:text-[1.55rem] ${
+              isLight ? "text-slate-900" : "text-spectre-text"
+            }`}
+          >
+            Finance
+          </span>
         </div>
-        <span
-          className={`font-cyber text-xl font-semibold tracking-[0.3em] ${
-            isLight ? "text-slate-900" : "text-spectre-text"
-          }`}
-        >
-          SPECTRE
-        </span>
       </div>
 
       <div className="flex items-center gap-3">
         <Button
+          theme={theme}
           variant="ghost"
           size="sm"
           onClick={onToggleTheme}
@@ -87,11 +62,20 @@ export function HeaderBar({
 
         {isConnected && walletAddress ? (
           <div className="flex items-center gap-2">
-            <div className="clip-cyber-btn flex items-center gap-2 border border-spectre-border-soft bg-spectre-card-soft/90 px-4 py-2 text-sm font-semibold text-spectre-accent">
+            <div
+              className={`clip-cyber-btn flex items-center gap-2 border px-4 py-2 text-sm font-semibold ${
+                isLight
+                  ? "border-slate-200 bg-white/90 text-slate-700"
+                  : "border-spectre-border-soft bg-slate-950/60 text-spectre-accent"
+              }`}
+            >
               <Wallet size={16} />
-              <span className="font-mono text-xs tracking-widest">{formatAddress(walletAddress)}</span>
+              <span className="font-mono text-xs tracking-widest">
+                {formatAddress(walletAddress)}
+              </span>
             </div>
             <Button
+              theme={theme}
               variant="ghost"
               size="sm"
               onClick={onDisconnect}
@@ -104,6 +88,7 @@ export function HeaderBar({
           </div>
         ) : (
           <Button
+            theme={theme}
             variant="primary"
             size="md"
             icon={<Wallet size={16} />}

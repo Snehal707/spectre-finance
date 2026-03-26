@@ -19,6 +19,13 @@ interface CofheResult<T> {
   error?: string;
 }
 
+export interface EncryptedInputPayload {
+  ctHash: bigint;
+  securityZone: number;
+  utype: number;
+  signature: string;
+}
+
 interface EncryptionState {
   isInitialized: boolean;
   isInitializing: boolean;
@@ -104,7 +111,7 @@ export function useCofhe() {
         | "uint128"
         | "uint256" = "uint128",
       onProgress?: (state: string) => void
-    ): Promise<CofheResult<unknown>> => {
+    ): Promise<CofheResult<EncryptedInputPayload>> => {
       if (!clientRef.current) {
         const initialized = await initialize();
         if (!initialized) {

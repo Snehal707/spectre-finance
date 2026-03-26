@@ -36,22 +36,38 @@ export function Card({
 
   return (
     <section className={`${base} ${toneClasses} ${className}`}>
-      {(title || description || headerExtra) && (
-        <header className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-          <div className="space-y-1">
-            {title && (
-              <h2 className={`font-cyber text-sm tracking-[0.22em] ${theme === "light" ? "text-slate-500" : "text-spectre-muted"}`}>
-                {title}
-              </h2>
-            )}
-            {description && (
-              <p className={`text-sm ${theme === "light" ? "text-slate-500" : "text-spectre-muted"}`}>{description}</p>
-            )}
-          </div>
-          {headerExtra && <div className="shrink-0">{headerExtra}</div>}
-        </header>
-      )}
-      <div>{children}</div>
+      <div
+        aria-hidden="true"
+        className={`pointer-events-none absolute inset-x-0 top-0 h-px ${
+          theme === "light"
+            ? "bg-gradient-to-r from-transparent via-sky-400/80 to-transparent"
+            : "bg-gradient-to-r from-transparent via-fhenix-blue/80 to-transparent"
+        }`}
+      />
+      <div
+        aria-hidden="true"
+        className={`pointer-events-none absolute right-0 top-0 h-36 w-36 -translate-y-12 translate-x-12 rounded-full blur-3xl ${
+          theme === "light" ? "bg-sky-200/70" : "bg-fhenix-purple/15"
+        }`}
+      />
+      <div className="relative">
+        {(title || description || headerExtra) && (
+          <header className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div className="space-y-1">
+              {title && (
+                <h2 className={`font-cyber text-sm tracking-[0.22em] ${theme === "light" ? "text-slate-500" : "text-spectre-muted"}`}>
+                  {title}
+                </h2>
+              )}
+              {description && (
+                <p className={`text-sm ${theme === "light" ? "text-slate-500" : "text-spectre-muted"}`}>{description}</p>
+              )}
+            </div>
+            {headerExtra && <div className="shrink-0">{headerExtra}</div>}
+          </header>
+        )}
+        <div>{children}</div>
+      </div>
     </section>
   );
 }
