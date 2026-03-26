@@ -19,7 +19,7 @@
 
 Spectre Finance allows users to:
 - **Deposit ETH** → Receive encrypted seETH balance
-- **Transfer seETH** → Current UI uses plaintext transfer calls by default
+- **Transfer seETH** → Current UI encrypts transfer inputs before calling the private FHERC20 path
 - **Withdraw securely** → Async decryption via CoFHE coprocessor
 
 Unlike traditional mixers, Spectre uses **Fully Homomorphic Encryption (FHE)** via Fhenix CoFHE to allow smart contracts to compute on encrypted data without ever decrypting it.
@@ -67,7 +67,7 @@ Unlike traditional mixers, Spectre uses **Fully Homomorphic Encryption (FHE)** v
 ### Flow Summary
 
 1. **Mint:** User sends ETH via `mint()` → Contract encrypts as `euint128` → Stored in `_balances` mapping → User receives seETH
-2. **Transfer:** Current UI path uses `transferPlain()` for reliability/UX (amount visible on-chain)
+2. **Transfer:** UI encrypts the amount with `@cofhe/sdk` and calls `transfer(to, InEuint128)` so the amount is not revealed on-chain
 3. **Burn (Withdraw):** 
    - Step 1: `requestBurnAll()` or `requestBurnPlain()` triggers `FHE.decrypt()` → sent to CoFHE coprocessor
    - Step 2: Wait ~30 seconds for threshold decryption
@@ -80,12 +80,12 @@ Unlike traditional mixers, Spectre uses **Fully Homomorphic Encryption (FHE)** v
 **Frontend:**
 - **Page:** `SpectrePage` (main app).
 - **Components:** `HeaderBar` (logo, connect, theme), `HeroBlock` (tagline, badges), `EncryptDecryptCard` (Mint / Transfer / Burn tabs, amount inputs, steps, Sync balance, claim).
-- **Hooks:** `useWallet` (RainbowKit/wagmi — connect, chainId, switch network), `useTheme`, `useCofhe` (optional `@cofhe/sdk` wrapper, currently not wired into the main Mint/Transfer/Burn flow).
+- **Hooks:** `useWallet` (RainbowKit/wagmi — connect, chainId, switch network), `useTheme`, `useCofhe` (`@cofhe/sdk` wrapper used by the Transfer flow for encrypted inputs).
 - **Config:** `config.ts` (Sepolia, contract addresses), `fherc20-abi.ts` (SpectreToken ABI).
 
 **Data flows:**
 - **Mint:** ETH → `mint()` → contract stores encrypted in `_balances`, updates indicated balance → Transfer(0, user, 0.0001) for wallets.
-- **Transfer:** UI currently calls `transferPlain(to, amount)`; encrypted `transfer(to, InEuint128)` remains available at contract/ABI level for future private-transfer UX.
+- **Transfer:** UI encrypts the amount with `@cofhe/sdk` and calls `transfer(to, InEuint128)` directly.
 - **Sync balance:** `requestBalanceDecryption()` → CoFHE decrypts `_balances[user]` → frontend polls `getDecryptedBalance()` → result stored in localStorage and shown in UI.
 - **Burn:** `requestBurnPlain` / `requestBurnAll` → contract stores request and calls `FHE.decrypt()` → CoFHE decrypts off-chain → frontend polls `isWithdrawalReady()` → user calls `claimETH()` to receive ETH.
 
@@ -153,7 +153,7 @@ sequenceDiagram
 | Data | Privacy Level | Details |
 |------|---------------|---------|
 | **Individual Balances** | Encrypted | Stored as `euint128`, only owner can decrypt |
-| **Transfer Amounts (current UI path)** | Public on-chain | Current UI uses `transferPlain`; encrypted transfer path is available but not default |
+| **Transfer Amounts (current UI path)** | Encrypted | Current UI uses the FHERC20 `transfer(to, InEuint128)` path via `@cofhe/sdk` |
 | **Failed Transfers** | Indistinguishable | Failed transfers look identical to successful ones |
 
 ### What is NOT Private (Metadata Leakage)
@@ -180,7 +180,7 @@ sequenceDiagram
 1. **Async Decryption Delay:** ~30 seconds wait for CoFHE to process
 2. **No Withdrawal Timeout:** If decryption fails, funds may be locked (emergency recovery planned)
 3. **Deposit Amount Visible:** The ETH amount you mint is public
-4. **Current Transfer Path:** UI uses `transferPlain`, so transfer amounts are visible on-chain unless encrypted transfer UX is enabled
+4. **Sender/Receiver Metadata:** Addresses and timing still remain public even when the transfer amount is encrypted
 5. **Round Number Leakage:** Depositing exactly 1.0 ETH leaks information (use Privacy Guard)
 
 ---
@@ -297,7 +297,7 @@ A true **FHERC20** token with full ERC20 compatibility and encrypted balances. U
 | **Encrypted Balance** | `encryptedBalanceOf(address)` → `euint128` (app-only) |
 | **Indicated Balance** | `indicatedBalanceOf(address)` → `uint256` |
 | **Private Transfer** | `transfer(to, InEuint128)` |
-| **Plain Transfer** | `transferPlain(to, amount)` |
+| **Plain Transfer (testing/fallback)** | `transferPlain(to, amount)` |
 | **Approve/Allowance** | `approve()`, `allowance()`, `transferFrom()` |
 | **Mint (ETH→seETH)** | `mint()` payable |
 | **Burn (seETH→ETH)** | `requestBurnAll()`, `requestBurnPlain()` |
