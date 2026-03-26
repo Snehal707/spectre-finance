@@ -1,6 +1,6 @@
 # MetaMask/Blockaid Blocklist Removal Request
 
-Reference doc for requesting removal of **spectre-finance.vercel.app** from the MetaMask phishing blocklist.
+Reference doc for requesting removal of **spectre-finance-ukzc.vercel.app** from the MetaMask phishing blocklist.
 
 ## Where to File
 
@@ -17,7 +17,7 @@ Reference doc for requesting removal of **spectre-finance.vercel.app** from the 
 ## Issue Title (copy exactly)
 
 ```
-[Blocklist removal request] spectre-finance.vercel.app - Legitimate DeFi Protocol
+[Blocklist removal request] spectre-finance-ukzc.vercel.app - Legitimate DeFi Protocol
 ```
 
 ---
@@ -25,7 +25,7 @@ Reference doc for requesting removal of **spectre-finance.vercel.app** from the 
 ## Issue Body (copy-paste into the description)
 
 ## Domain Information
-- **Domain:** https://spectre-finance.vercel.app
+- **Domain:** https://spectre-finance-ukzc.vercel.app
 - **Type:** Legitimate DeFi dApp (Privacy-focused protocol using Fhenix CoFHE)
 
 ## Evidence of Legitimacy
@@ -69,7 +69,7 @@ I believe this domain was flagged due to:
 
 ## Request
 
-Please remove `spectre-finance.vercel.app` from the blocklist. This is a legitimate educational/testnet project demonstrating fully homomorphic encryption in DeFi.
+Please remove `spectre-finance-ukzc.vercel.app` from the blocklist. This is a legitimate educational/testnet project demonstrating fully homomorphic encryption in DeFi.
 
 I'm happy to provide any additional verification needed.
 
@@ -81,7 +81,7 @@ Thank you!
 
 | Item          | Value |
 | ------------- | ----- |
-| Domain        | spectre-finance.vercel.app |
+| Domain        | spectre-finance-ukzc.vercel.app |
 | Contract      | 0x9480557892B7e67347b105459C4b8F6B1F791A65 (Sepolia, verified) |
 | Repo          | https://github.com/Snehal707/spectre-finance |
 | Where to file | https://github.com/MetaMask/eth-phishing-detect/issues |

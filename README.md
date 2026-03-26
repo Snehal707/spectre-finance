@@ -10,7 +10,7 @@
 
 ## Live Demo
 
-- **Website:** https://spectrefinance.vercel.app
+- **Website:** https://spectre-finance-ukzc.vercel.app
 - **Contract (Sepolia):** [`0x751111805C4c8a014da9f040199d040788d61347`](https://sepolia.etherscan.io/address/0x751111805C4c8a014da9f040199d040788d61347) (SpectreToken V7)
 
 ---
@@ -132,7 +132,7 @@ sequenceDiagram
 
 ### Try the Live App
 
-1. Go to https://spectrefinance.vercel.app
+1. Go to https://spectre-finance-ukzc.vercel.app
 2. Click **CONNECT** and pick your wallet (switch to Sepolia network)
 3. Enter an amount and click **MINT seETH**
 4. Confirm the transaction in your wallet
