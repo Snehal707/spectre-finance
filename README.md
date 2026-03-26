@@ -1,4 +1,4 @@
-# Spectre Finance 👻
+# Spectre Finance
 
 **Privacy-preserving DeFi protocol using CoFHE (Confidential FHE) on Sepolia**
 
@@ -8,7 +8,7 @@
 ![React](https://img.shields.io/badge/React-19-61DAFB)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-## 🚀 Live Demo
+## Live Demo
 
 - **Website:** https://spectrefinance.vercel.app
 - **Contract (Sepolia):** [`0x751111805C4c8a014da9f040199d040788d61347`](https://sepolia.etherscan.io/address/0x751111805C4c8a014da9f040199d040788d61347) (SpectreToken V7)
@@ -26,7 +26,7 @@ Unlike traditional mixers, Spectre uses **Fully Homomorphic Encryption (FHE)** v
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -124,7 +124,7 @@ sequenceDiagram
 
 ---
 
-## ⚡ Quick Start (1 Minute)
+## Quick Start
 
 ### Prerequisites
 - Any EVM wallet — MetaMask, Rainbow, Coinbase Wallet, or WalletConnect-compatible ([Get Sepolia ETH from faucet](https://sepoliafaucet.com))
@@ -136,7 +136,7 @@ sequenceDiagram
 2. Click **CONNECT** and pick your wallet (switch to Sepolia network)
 3. Enter an amount and click **MINT seETH**
 4. Confirm the transaction in your wallet
-5. Your ETH is now encrypted as seETH! ✨
+5. Your ETH is now encrypted as seETH.
 
 ### What You Should See
 
@@ -146,25 +146,25 @@ sequenceDiagram
 
 ---
 
-## 🔐 Security & Privacy
+## Security & Privacy
 
 ### What IS Private
 
 | Data | Privacy Level | Details |
 |------|---------------|---------|
-| **Individual Balances** | 🔒 Fully Encrypted | Stored as `euint128`, only owner can decrypt |
-| **Transfer Amounts (current UI path)** | 🔓 Public on-chain | Current UI uses `transferPlain`; encrypted transfer path is available but not default |
-| **Failed Transfers** | 🔒 Indistinguishable | Failed transfers look identical to successful ones |
+| **Individual Balances** | Encrypted | Stored as `euint128`, only owner can decrypt |
+| **Transfer Amounts (current UI path)** | Public on-chain | Current UI uses `transferPlain`; encrypted transfer path is available but not default |
+| **Failed Transfers** | Indistinguishable | Failed transfers look identical to successful ones |
 
 ### What is NOT Private (Metadata Leakage)
 
 | Data | Visibility | Mitigation |
 |------|------------|------------|
-| **Deposit Amount** | 🔓 Public on-chain | Use randomized amounts (Privacy Guard helps) |
-| **Withdrawal Amount** | 🔓 Revealed at claim | Inherent to async decryption |
-| **Transaction Timing** | 🔓 Public | Space out transactions |
-| **Sender/Receiver** | 🔓 Public addresses | Use fresh wallets |
-| **TVL (Total Value)** | 🔓 Public | By design for transparency |
+| **Deposit Amount** | Public on-chain | Use randomized amounts (Privacy Guard helps) |
+| **Withdrawal Amount** | Revealed at claim | Inherent to async decryption |
+| **Transaction Timing** | Public | Space out transactions |
+| **Sender/Receiver** | Public addresses | Use fresh wallets |
+| **TVL (Total Value)** | Public | By design for transparency |
 
 ### Trust Assumptions
 
@@ -185,7 +185,7 @@ sequenceDiagram
 
 ---
 
-## 🛠️ Development Setup
+## Development Setup
 
 ### 1. Clone & Install
 
@@ -239,7 +239,7 @@ npm run dev
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 spectre-finance/
@@ -282,7 +282,7 @@ spectre-finance/
 
 ---
 
-## 📜 Smart Contracts
+## Smart Contracts
 
 ### SpectreToken.sol (FHERC20) - **Deployed V7**
 
@@ -333,24 +333,24 @@ event WithdrawalClaimed(address indexed user);
 
 ---
 
-## 🎨 Frontend Features
+## Frontend Features
 
-- 🌓 **Dark/Light Theme** — Cyberpunk aesthetic with scanline overlays, cyber-grid, and clipped corners
-- 🌈 **RainbowKit Multi-Wallet** — MetaMask, Rainbow, Coinbase Wallet, WalletConnect
-- 🖥️ **SystemBoot Sequence** — Terminal-style startup animation (once per session)
-- ⚡ **SuccessEffect** — Full-screen white-out flash with per-action messages (Mint/Transfer/Burn)
-- 🔒 **Privacy Mode** — Encrypted balance display
-- 🤖 **Privacy Guard** — AI warns about round number deposits
-- 📋 **Transaction History** — Recent activity from localStorage with explorer links
-- 🏷️ **Feature Badges** — Modular Frame design with glowing accents
-- 📦 **AlertFrame System** — Tactical data-frame alerts (success/warn/error/info) with theme-aware text
-- 📱 **Responsive** — Works on desktop and mobile
-- ⏳ **Pending State UX** — Visual progress for 30s decrypt wait
-- 🦊 **Wallet Compatible** — Indicated balance + Transfer events for wallet display
+- **Dark/Light Theme** — Cyberpunk aesthetic with scanline overlays, cyber-grid, and clipped corners
+- **RainbowKit Multi-Wallet** — MetaMask, Rainbow, Coinbase Wallet, WalletConnect
+- **SystemBoot Sequence** — Terminal-style startup animation (once per session)
+- **SuccessEffect** — Full-screen white-out flash with per-action messages (Mint/Transfer/Burn)
+- **Privacy Mode** — Encrypted balance display
+- **Privacy Guard** — Warns about round-number deposits
+- **Transaction History** — Recent activity from localStorage with explorer links
+- **Feature Badges** — Modular frame design with glowing accents
+- **AlertFrame System** — Tactical alerts (success/warn/error/info) with theme-aware text
+- **Responsive** — Works on desktop and mobile
+- **Pending State UX** — Visual progress for decrypt wait
+- **Wallet Compatibility** — Indicated balance + transfer events for wallet display
 
 ---
 
-## 🌐 Supported Networks
+## Supported Networks
 
 | Network | Chain ID | Status |
 |---------|----------|--------|
@@ -360,7 +360,7 @@ event WithdrawalClaimed(address indexed user);
 
 ---
 
-## 📚 Resources
+## Resources
 
 - [Fhenix CoFHE Documentation](https://cofhe-docs.fhenix.zone)
 - [Client SDK migration guide (`cofhejs` -> `@cofhe/sdk`)](https://cofhe-docs.fhenix.zone/client-sdk/introduction/migrating-from-cofhejs)
@@ -370,7 +370,7 @@ event WithdrawalClaimed(address indexed user);
 
 ---
 
-## ⚠️ Disclaimer
+## Disclaimer
 
 **THIS SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND.**
 
@@ -384,13 +384,13 @@ event WithdrawalClaimed(address indexed user);
 
 ---
 
-## 📄 License
+## License
 
 MIT License - see [LICENSE](LICENSE) file.
 
 ---
 
-## 🙏 Credits
+## Credits
 
 Built with:
 - **Fhenix Protocol** — CoFHE infrastructure
