@@ -19,7 +19,7 @@
 
 Spectre Finance allows users to:
 - **Deposit ETH** → Receive encrypted seETH balance
-- **Transfer privately** → Move encrypted balances without revealing amounts
+- **Transfer seETH** → Current UI uses plaintext transfer calls by default
 - **Withdraw securely** → Async decryption via CoFHE coprocessor
 
 Unlike traditional mixers, Spectre uses **Fully Homomorphic Encryption (FHE)** via Fhenix CoFHE to allow smart contracts to compute on encrypted data without ever decrypting it.
@@ -67,7 +67,7 @@ Unlike traditional mixers, Spectre uses **Fully Homomorphic Encryption (FHE)** v
 ### Flow Summary
 
 1. **Mint:** User sends ETH via `mint()` → Contract encrypts as `euint128` → Stored in `_balances` mapping → User receives seETH
-2. **Transfer:** Encrypted amount moved between users via `transfer()` (no one sees the amount)
+2. **Transfer:** Current UI path uses `transferPlain()` for reliability/UX (amount visible on-chain)
 3. **Burn (Withdraw):** 
    - Step 1: `requestBurnAll()` or `requestBurnPlain()` triggers `FHE.decrypt()` → sent to CoFHE coprocessor
    - Step 2: Wait ~30 seconds for threshold decryption
@@ -80,12 +80,12 @@ Unlike traditional mixers, Spectre uses **Fully Homomorphic Encryption (FHE)** v
 **Frontend:**
 - **Page:** `SpectrePage` (main app).
 - **Components:** `HeaderBar` (logo, connect, theme), `HeroBlock` (tagline, badges), `EncryptDecryptCard` (Mint / Transfer / Burn tabs, amount inputs, steps, Sync balance, claim).
-- **Hooks:** `useWallet` (RainbowKit/wagmi — connect, chainId, switch network), `useTheme`, `useCofhe` (optional: `@cofhe/sdk` wrapper for encrypt/decrypt/permits).
+- **Hooks:** `useWallet` (RainbowKit/wagmi — connect, chainId, switch network), `useTheme`, `useCofhe` (optional `@cofhe/sdk` wrapper, currently not wired into the main Mint/Transfer/Burn flow).
 - **Config:** `config.ts` (Sepolia, contract addresses), `fherc20-abi.ts` (SpectreToken ABI).
 
 **Data flows:**
 - **Mint:** ETH → `mint()` → contract stores encrypted in `_balances`, updates indicated balance → Transfer(0, user, 0.0001) for wallets.
-- **Transfer:** `transferPlain(to, amount)` (or encrypted `transfer(to, InEuint128)` with `@cofhe/sdk`) → encrypted and indicated balances updated.
+- **Transfer:** UI currently calls `transferPlain(to, amount)`; encrypted `transfer(to, InEuint128)` remains available at contract/ABI level for future private-transfer UX.
 - **Sync balance:** `requestBalanceDecryption()` → CoFHE decrypts `_balances[user]` → frontend polls `getDecryptedBalance()` → result stored in localStorage and shown in UI.
 - **Burn:** `requestBurnPlain` / `requestBurnAll` → contract stores request and calls `FHE.decrypt()` → CoFHE decrypts off-chain → frontend polls `isWithdrawalReady()` → user calls `claimETH()` to receive ETH.
 
@@ -153,7 +153,7 @@ sequenceDiagram
 | Data | Privacy Level | Details |
 |------|---------------|---------|
 | **Individual Balances** | 🔒 Fully Encrypted | Stored as `euint128`, only owner can decrypt |
-| **Transfer Amounts** | 🔒 Hidden | No one can see how much was transferred |
+| **Transfer Amounts (current UI path)** | 🔓 Public on-chain | Current UI uses `transferPlain`; encrypted transfer path is available but not default |
 | **Failed Transfers** | 🔒 Indistinguishable | Failed transfers look identical to successful ones |
 
 ### What is NOT Private (Metadata Leakage)
@@ -179,8 +179,9 @@ sequenceDiagram
 
 1. **Async Decryption Delay:** ~30 seconds wait for CoFHE to process
 2. **No Withdrawal Timeout:** If decryption fails, funds may be locked (emergency recovery planned)
-3. **Deposit Amount Visible:** The ETH amount you mint is public; only seETH transfers are private
-4. **Round Number Leakage:** Depositing exactly 1.0 ETH leaks information (use Privacy Guard)
+3. **Deposit Amount Visible:** The ETH amount you mint is public
+4. **Current Transfer Path:** UI uses `transferPlain`, so transfer amounts are visible on-chain unless encrypted transfer UX is enabled
+5. **Round Number Leakage:** Depositing exactly 1.0 ETH leaks information (use Privacy Guard)
 
 ---
 
